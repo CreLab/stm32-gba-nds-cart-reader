@@ -336,7 +336,7 @@ HAL_StatusTypeDef HAL_PCD_UnRegisterIsoInIncpltCallback(PCD_HandleTypeDef *hpcd)
 HAL_StatusTypeDef HAL_PCD_Start(PCD_HandleTypeDef *hpcd);
 HAL_StatusTypeDef HAL_PCD_Stop(PCD_HandleTypeDef *hpcd);
 void HAL_PCD_IRQHandler(PCD_HandleTypeDef *hpcd);
-void HAL_PCD_WKUP_IRQHandler(PCD_HandleTypeDef *hpcd);
+void HAL_PCD_WKUP_IRQHandler();
 
 void HAL_PCD_SOFCallback(PCD_HandleTypeDef *hpcd);
 void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd);
