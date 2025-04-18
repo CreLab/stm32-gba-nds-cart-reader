@@ -1,7 +1,13 @@
-.PHONY: all clean flash
+.PHONY: build all clean flash
 
 # setup
-COMPILE_OPTS = -mcpu=cortex-m3 -march=armv7-m -mthumb -Wall -Wextra -Wconversion -g -O2 -std=c11
+PROJECT_NAME = stm32_cardridge_reader
+MAIN_OUT = build
+MAIN_OUT_ELF = $(MAIN_OUT)/$(PROJECT_NAME).elf
+MAIN_OUT_BIN = $(MAIN_OUT)/$(PROJECT_NAME).bin
+MAIN_OUT_MAP = $(MAIN_OUT)/$(PROJECT_NAME).map
+
+COMPILE_OPTS = -mcpu=cortex-m3 -march=armv7-m -mthumb -Wall -Wextra -pedantic -Wconversion -g -O2 -std=c11
 INCLUDE_DIRS = -I include -I lib/inc
 LIBRARY_DIRS = -L lib
 
@@ -15,7 +21,7 @@ AS = arm-none-eabi-gcc
 ASFLAGS = $(COMPILE_OPTS) -c
 
 LD = arm-none-eabi-gcc
-LDFLAGS = $(COMPILE_OPTS) -Wl,--gc-sections,-Map=$@.map,-cref --specs=nosys.specs $(INCLUDE_DIRS) $(LIBRARY_DIRS) -T STM32F103RCTx_FLASH.ld
+LDFLAGS = $(COMPILE_OPTS) -Wl,--gc-sections,-Map=$(MAIN_OUT_MAP),-cref --specs=nosys.specs $(INCLUDE_DIRS) $(LIBRARY_DIRS) -T STM32F103RCTx_FLASH.ld
 
 OBJCP = arm-none-eabi-objcopy
 OBJCPFLAGS = -O binary
@@ -23,30 +29,41 @@ OBJCPFLAGS = -O binary
 AR = arm-none-eabi-ar
 ARFLAGS = cr
 
-MAIN_OUT = main
-MAIN_OUT_ELF = $(MAIN_OUT).elf
-MAIN_OUT_BIN = $(MAIN_OUT).bin
+PROJECT_SRC_FILES = $(wildcard src/*.c)
+LIB_SRC_FILES = $(wildcard lib/src/*.c)
 
-SRC_FILES = $(wildcard src/*.c) $(wildcard lib/src/*.c)
-ASM_FILES = $(wildcard asm/*.s)
-OBJ_FILES = $(SRC_FILES:.c=.o) $(ASM_FILES:.s=.o) src/nds_cart_key.o
+KEY_FILE = $(MAIN_OUT)/nds_cart_key.o
+OBJ_FILES = $(subst src,$(MAIN_OUT), $(PROJECT_SRC_FILES:.c=.o)) $(subst lib/src,$(MAIN_OUT), $(LIB_SRC_FILES:.c=.o)) build/startup_stm32f103xe.o
+ELF_OBJ_FILES = $(OBJ_FILES) $(KEY_FILE)
 
+build:
+	mkdir -p build
 
 # all
-all: $(MAIN_OUT_ELF) $(MAIN_OUT_BIN)
+all: clean build $(KEY_FILE) $(MAIN_OUT_ELF) $(MAIN_OUT_BIN)
 
 # main
-$(MAIN_OUT_ELF): $(OBJ_FILES)
-	$(LD) $(LDFLAGS) $^ -o $@
 
-src/nds_cart_key.o: biosnds7.rom biosdsi7.rom
-	./gen_keys.sh | $(CC) $(CFLAGS) -x c -c -o $@ -
+$(KEY_FILE): bios/biosnds7.rom bios/biosdsi7.rom
+	./scripts/gen_keys.sh | $(CC) $(CFLAGS) -x c -c -o $@ -
+
+build/%.o: src/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/%.o: lib/src/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+	
+build/%.o: %.s
+	$(CC) $(CFLAGS) -c $< -o $@
+	
+$(MAIN_OUT_ELF): $(ELF_OBJ_FILES)
+	$(LD) $(LDFLAGS) $^ -o $@
 
 $(MAIN_OUT_BIN): $(MAIN_OUT_ELF)
 	$(OBJCP) $(OBJCPFLAGS) $< $@
 
 clean:
-	rm -f src/*.o lib/src/*.o asm/*.o $(MAIN_OUT_ELF) $(MAIN_OUT_BIN)
+	rm -rf $(MAIN_OUT)
 
 flash: $(MAIN_OUT_BIN)
 	stm32flash -b 115200 -w $(MAIN_OUT_BIN) /dev/ttyUSB0

@@ -1,4 +1,9 @@
-#pragma once
+#ifndef UTIL_H
+#define UTIL_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdint.h>
 
@@ -17,6 +22,11 @@ __attribute__((always_inline)) static inline void WAIT(size_t x)
            );
 }
 
+typedef struct {
+    uint32_t P[16 + 2];
+    uint32_t S[4][256];
+} s_blowfish_t;
+
 void usb_send_data(const void *data, uint16_t len);
 void usb_print_bytes(const void *data, uint16_t len);
 void usb_printf(const char *msg, ...);
@@ -24,6 +34,8 @@ void usb_printf(const char *msg, ...);
 void uart_send_data(const void *data, uint16_t len);
 void uart_print_bytes(const void *data, uint16_t len);
 void uart_printf(const char *msg, ...);
+
+void print_keybuf(const char *pMsg, s_blowfish_t* pKeyBuf);
 
 const char *itox8(uint8_t x);
 const char *itox32(uint32_t x);
@@ -45,5 +57,24 @@ uint64_t bitrev_64(uint64_t x);
 #define myassert(...) do { } while(0)
 #endif
 
+#ifdef DEBUG
+#define DEBUG_PRINTF(pMsg, ...) uart_printf(pMsg, ## __VA_ARGS__)
+#define DEBUG_PRINT(pMsg) uart_printf(pMsg, NULL)
+#else
+#define DEBUG_PRINTF(pMsg, ...)
+#define DEBUG_PRINT(pMsg)
+#endif
+
+#ifdef DEBUG
+#define PRINT_KEY_BUFFER(pMsg, pBuf) print_keybuf(pMsg, pBuf)
+#else
+#define PRINT_KEY_BUFFER(pMsg, pBuf)
+#endif
 
 #define WALGN __attribute__((aligned(4)))
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* UTIL_H */

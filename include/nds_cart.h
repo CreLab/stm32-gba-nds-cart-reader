@@ -1,4 +1,9 @@
-#pragma once
+#ifndef NDS_CART_H
+#define NDS_CART_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdint.h>
 #include <stddef.h>
@@ -181,3 +186,9 @@ struct nds_header {
 _Static_assert(sizeof(struct nds_header) == 0x1000u, "wrongly sized nds_header struct");
 
 #define NDS_PROTOCOL_MSK 0x80000000u
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* NDS_CART_H */

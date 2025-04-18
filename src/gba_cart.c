@@ -26,7 +26,7 @@
 #define PIN_NCS2 15u
 #define PIN_NCS2_MSK (1u << PIN_NCS2)
 
-static int gba_cart_delay = 2;
+static size_t gba_cart_delay = 2;
 #define LVL_SHIFT_DELAY() do { WAIT(0); } while (0)
 #define GBA_CART_DELAY() do { WAIT(gba_cart_delay); } while (0)
 
@@ -291,10 +291,14 @@ size_t gba_cart_save_size()
                     gba_cart_rom_read((i / 2) + (j * 2), (uint16_t *)&cmp, 2);
                 else
                     cmp = buffer[j + 1];
+
+                char tmp[4] = "H_";
+                uint32_t* ptmp = (uint32_t*)tmp;
+
                 if (cmp == *(uint32_t *)"H1M_") {
                     // found "FLASH1M_" string
                     return 0x20000;
-                } else if ((cmp & 0xFFFF) == ((*(uint32_t *)"H_") & 0xFFFF)) {
+                } else if ((cmp & 0xFFFF) == (ptmp[0] & 0xFFFF)) {
                     // found "FLASH_" string
                     return 0x10000;
                 }
@@ -304,7 +308,11 @@ size_t gba_cart_save_size()
                     gba_cart_rom_read((i / 2) + (j * 2), (uint16_t *)&cmp, 2);
                 else
                     cmp = buffer[j + 1];
-                if ((cmp & 0xFF) == ((*(uint32_t *)"_") & 0xFF)) {
+
+                char tmp[4] = "_";
+                uint32_t* ptmp = (uint32_t*)tmp;
+
+                if ((cmp & 0xFF) == (ptmp[0] & 0xFF)) {
                     // found "SRAM_" string
                     return 0x8000;
                 }
@@ -485,7 +493,7 @@ void gba_cart_flash_switch_bank(uint8_t bank)
  */
 static void gba_cart_eeprom_read_data(uint16_t block_addr, uint8_t *data, bool large)
 {
-    int gba_cart_delay_save = gba_cart_delay;
+    size_t gba_cart_delay_save = gba_cart_delay;
     gba_cart_delay = 8;
     {
         int address_bits = large ? 14 : 6;
@@ -522,7 +530,7 @@ static void gba_cart_eeprom_read_data(uint16_t block_addr, uint8_t *data, bool l
 
 static bool gba_cart_eeprom_write_data(uint16_t block_addr, const uint8_t *data, bool large)
 {
-    int gba_cart_delay_save = gba_cart_delay;
+    size_t gba_cart_delay_save = gba_cart_delay;
     gba_cart_delay = 8;
 
     int address_bits = large ? 14 : 6;

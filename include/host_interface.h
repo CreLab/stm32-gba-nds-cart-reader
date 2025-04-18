@@ -1,4 +1,9 @@
-#pragma once
+#ifndef HOST_INTERFACE_H
+#define HOST_INTERFACE_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdint.h>
 #include <stddef.h>
@@ -99,3 +104,9 @@ struct device_reply {
 
 void hostif_run(void);
 void hostif_data_receive(const uint8_t *data, uint16_t size);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* HOST_INTERFACE_H */

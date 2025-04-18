@@ -1,4 +1,9 @@
-#pragma once
+#ifndef GAB_CART_H
+#define GAB_CART_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -29,3 +34,9 @@ void gba_cart_eeprom_512_read_data(uint16_t block_addr, uint8_t *data);
 bool gba_cart_eeprom_512_write_data(uint16_t block_addr, const uint8_t *data);
 void gba_cart_eeprom_8k_read_data(uint16_t block_addr, uint8_t *data);
 bool gba_cart_eeprom_8k_write_data(uint16_t block_addr, const uint8_t *data);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* GAB_CART_H */

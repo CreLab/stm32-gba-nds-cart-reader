@@ -1,8 +1,5 @@
-*.a
-*.o
-*.bin
-*.hex
-*.elf
-*.map
-biosnds7.rom
-biosdsi7.rom
+.idea
+bios
+build
+*.nds
+Project_Default.xml
