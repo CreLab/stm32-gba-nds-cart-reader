@@ -95,7 +95,7 @@
 #define USBD_LANGID_STRING     1033
 #define USBD_MANUFACTURER_STRING     "ipatix Tech Corp"
 #define USBD_PID_FS     22336
-#define USBD_PRODUCT_STRING_FS     "STM32 NDS AGB ComPort"
+#define USBD_PRODUCT_STRING_FS     "Nintendo_Cardridge_Reader"
 #define USBD_SERIALNUMBER_STRING_FS     "00000000001A"
 #define USBD_CONFIGURATION_STRING_FS     "CDC Config"
 #define USBD_INTERFACE_STRING_FS     "CDC Interface"
