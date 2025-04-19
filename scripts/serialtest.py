@@ -22,7 +22,7 @@ def print_hex(x):
 
         binary_file.write(chunk_data)
 
-ser = serial.Serial('COM7', baudrate=115200, timeout=1)
+ser = serial.Serial('COM8', baudrate=115200, timeout=1)
 
 if not ser.isOpen():
     print("failed opening serial device")

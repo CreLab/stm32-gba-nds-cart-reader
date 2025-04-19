@@ -1,5 +1,6 @@
 .idea
 bios
 build
+src/nds_cart_key.c
 *.nds
 Project_Default.xml
