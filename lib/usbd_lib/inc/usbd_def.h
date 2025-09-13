@@ -26,7 +26,7 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "usbd_conf.h"
+#include "../../../inc/usbd/usbd_conf.h"
 
 /** @addtogroup STM32_USBD_DEVICE_LIBRARY
   * @{
@@ -268,9 +268,8 @@ typedef struct _USBD_HandleTypeDef
 
 /** @defgroup USBD_DEF_Exported_Macros
   * @{
-  */ 
-#define  SWAPBYTE(addr)        (((uint16_t)(*((uint8_t *)(addr)))) + \
-                               (((uint16_t)(*(((uint8_t *)(addr)) + 1U))) << 8U))
+  */
+#define SWAPBYTE(addr) (uint16_t)(((uint16_t)((addr)[1]) << 8) | (addr)[0])
 
 #define LOBYTE(x)  ((uint8_t)((x) & 0x00FFU))
 #define HIBYTE(x)  ((uint8_t)(((x) & 0xFF00U) >> 8U))

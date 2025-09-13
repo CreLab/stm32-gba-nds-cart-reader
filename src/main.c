@@ -83,18 +83,6 @@ void SystemClock_Config(void)
         Error_Handler();
 }
 
-/**
- * @brief  This function is executed in case of error occurrence.
- * @retval None
- */
-void Error_Handler(void)
-{
-    /* USER CODE BEGIN Error_Handler_Debug */
-    /* User can add his own implementation to report the HAL error return state */
-
-    /* USER CODE END Error_Handler_Debug */
-}
-
 #ifdef  USE_FULL_ASSERT
 /**
  * @brief  Reports the name of the source file and the source line number

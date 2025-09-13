@@ -1,80 +1,64 @@
 cmake_minimum_required(VERSION 3.22)
 
-#
-# This file is generated only once,
-# and is not re-generated if converter is called multiple times.
-#
-# User is free to modify the file as much as necessary
-#
+find_package(Python3 REQUIRED)
 
-# Setup compiler settings
+add_custom_command(
+        OUTPUT ${CMAKE_SOURCE_DIR}/src/nds_cart_key.c
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/gen_keys.py ${CMAKE_SOURCE_DIR}
+        COMMENT "Running script before build"
+)
+
+add_custom_target(run_script ALL DEPENDS ${CMAKE_SOURCE_DIR}/src/nds_cart_key.c)
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
-
-# Define the build type
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
-# Set the project name
-set(CMAKE_PROJECT_NAME stm32-cartridge-reader)
+set(CMAKE_PROJECT_NAME nintendo-cartridge-reader)
+set(CMAKE_PROJECT_INTERFACE cartridge-reader-interface)
 
-# Include toolchain file
-include("cmake/gcc-arm-none-eabi.cmake")
+if(NOT ENABLE_UNIT_TESTS)
+    include("cmake/gcc-arm-none-eabi.cmake")
+endif()
 
-# Enable compile command to ease indexing with e.g. clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
-# Core project settings
 project(${CMAKE_PROJECT_NAME})
-message("Build type: " ${CMAKE_BUILD_TYPE})
+message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
-# Enable CMake support for ASM and C languages
 enable_language(C ASM)
 
-# Create an executable object type
-add_executable(${CMAKE_PROJECT_NAME})
+add_subdirectory(lib/stm32_lib)
+add_subdirectory(lib/usbd_lib)
 
-# Add STM32CubeMX generated sources
-add_subdirectory(cmake/stm32cubemx)
+add_library(${CMAKE_PROJECT_INTERFACE} INTERFACE)
+target_include_directories(${CMAKE_PROJECT_INTERFACE} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_CURRENT_SOURCE_DIR}/inc/usbd)
 
-# Link directories setup
-target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user defined library search paths
-)
+if(ENABLE_UNIT_TESTS)
+    enable_language(CXX)
+    add_compile_options(-fdata-sections -ffunction-sections)
 
-# Add sources to executable
-target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user sources here
-)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/lib/unit_tests_lib/catch2/catch.cmake)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/lib/unit_tests_lib/approval/approval_tests.cmake)
 
-# Add include paths
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user defined include paths
-)
+    set(XML_ENDIANNESS "LITTLE")
 
-# Add project symbols (macros)
-target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user defined symbols
-)
+    add_subdirectory(tests)
+else ()
+    add_executable(${CMAKE_PROJECT_NAME})
+    target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_PROJECT_INTERFACE} stm32_lib usbd_lib)
+    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.map)
+    add_dependencies(${CMAKE_PROJECT_NAME} run_script)
 
-# Add linked libraries
-target_link_libraries(${CMAKE_PROJECT_NAME}
-    stm32cubemx
-
-    # Add user defined libraries
-)
-
-add_custom_command(
-        TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.bin
-        COMMENT "Erzeuge output.bin"
-)
-
-add_custom_command(
-        TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_OBJCOPY} -O ihex ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.hex
-        COMMENT "Erzeuge output.hex"
-)
+    add_custom_command(
+            TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_OBJCOPY} -O ihex ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.hex
+            COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.bin
+            COMMENT "Create ${CMAKE_PROJECT_NAME}.hex and ${CMAKE_PROJECT_NAME}.bin"
+    )
+endif()

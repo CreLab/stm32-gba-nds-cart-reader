@@ -774,10 +774,7 @@ PCD_StateTypeDef HAL_PCD_GetState(PCD_HandleTypeDef const *hpcd);
   */
 #define PCD_SET_EP_ADDRESS(USBx, bEpNum, bAddr) \
   do { \
-    uint16_t _wRegVal; \
-    \
-    _wRegVal = (PCD_GET_ENDPOINT((USBx), (bEpNum)) & USB_EPREG_MASK) | (bAddr); \
-    \
+    uint16_t _wRegVal = (uint16_t)((PCD_GET_ENDPOINT((USBx), (bEpNum)) & USB_EPREG_MASK) | (bAddr)); \
     PCD_SET_ENDPOINT((USBx), (bEpNum), (_wRegVal | USB_EP_CTR_RX | USB_EP_CTR_TX)); \
   } while(0) /* PCD_SET_EP_ADDRESS */
 

@@ -14,12 +14,12 @@ __attribute__((always_inline)) static inline void NOP(void)
 
 __attribute__((always_inline)) static inline void WAIT(size_t x)
 {
-    __asm__ volatile(
-            ".Ldelay_loop_%=:\n\t"
-            "subs %[cnt], #1\n\t"
-            "bhi .Ldelay_loop_%=\n\t"
-            : [cnt] "+r" (x) :: "cc"
-           );
+    // __asm__ volatile(
+    //         ".Ldelay_loop_%=:\n\t"
+    //         "subs %[cnt], #1\n\t"
+    //         "bhi .Ldelay_loop_%=\n\t"
+    //         : [cnt] "+r" (x) :: "cc"
+    //        );
 }
 
 typedef struct {

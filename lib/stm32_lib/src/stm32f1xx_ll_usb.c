@@ -2828,7 +2828,7 @@ void USB_WritePMA(USB_TypeDef const *USBx, uint8_t *pbUsrBuf, uint16_t wPMABufAd
   for (count = n; count != 0U; count--)
   {
     WrVal = pBuf[0];
-    WrVal |= (uint16_t)pBuf[1] << 8;
+    WrVal |= (uint16_t)(pBuf[1] << 8);
     *pdwVal = (WrVal & 0xFFFFU);
     pdwVal++;
 
