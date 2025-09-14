@@ -1,9 +1,12 @@
+#include "util.h"
 #include "usart.h"
 
 UART_HandleTypeDef huart1;
 
-void MX_USART1_UART_Init(void)
+HAL_StatusTypeDef MX_USART1_UART_Init(void)
 {
+    HAL_StatusTypeDef status = HAL_OK;
+
     huart1.Instance = USART1;
     huart1.Init.BaudRate = 115200;
     huart1.Init.WordLength = UART_WORDLENGTH_8B;
@@ -12,11 +15,10 @@ void MX_USART1_UART_Init(void)
     huart1.Init.Mode = UART_MODE_TX;
     huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
     huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+    CHECK_STATUS(HAL_UART_Init(&huart1));
 
-    if (HAL_UART_Init(&huart1) != HAL_OK)
-    {
-        Error_Handler();
-    }
+EXIT:
+    return status;
 }
 
 void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)

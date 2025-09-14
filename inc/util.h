@@ -6,6 +6,12 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include "stm32f1xx_hal.h"
+
+#define CHECK_STATUS(ret) if (ret != HAL_OK) { \
+    status = ret; \
+    goto EXIT; \
+    } \
 
 __attribute__((always_inline)) static inline void NOP(void)
 {

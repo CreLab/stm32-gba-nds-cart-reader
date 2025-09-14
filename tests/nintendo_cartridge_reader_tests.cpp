@@ -10,6 +10,5 @@ TEST_CASE("usb_send_data sends correct data", "[usb]") {
     const char testData[] = "Hello USB!";
     usb_send_data(testData, sizeof(testData));
 
-    // Test: Hat UserTxBufferFS am Ende die richtigen Daten?
     REQUIRE(std::memcmp(UserTxBufferFS, testData, sizeof(testData)) == 0);
 }

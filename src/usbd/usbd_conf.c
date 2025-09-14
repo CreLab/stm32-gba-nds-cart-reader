@@ -39,7 +39,6 @@
 /* USER CODE END PV */
 
 PCD_HandleTypeDef hpcd_USB_FS;
-void Error_Handler(void);
 
 /* USER CODE BEGIN 0 */
 
@@ -175,15 +174,14 @@ void HAL_PCD_ResetCallback(PCD_HandleTypeDef *hpcd)
 {
   USBD_SpeedTypeDef speed = USBD_SPEED_FULL;
 
-  if ( hpcd->Init.speed != PCD_SPEED_FULL)
+  if (hpcd->Init.speed == PCD_SPEED_FULL)
   {
-    Error_Handler();
-  }
     /* Set Speed. */
-  USBD_LL_SetSpeed((USBD_HandleTypeDef*)hpcd->pData, speed);
+    USBD_LL_SetSpeed((USBD_HandleTypeDef*)hpcd->pData, speed);
 
-  /* Reset Device. */
-  USBD_LL_Reset((USBD_HandleTypeDef*)hpcd->pData);
+    /* Reset Device. */
+    USBD_LL_Reset((USBD_HandleTypeDef*)hpcd->pData);
+  }
 }
 
 /**
@@ -310,7 +308,7 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
   hpcd_USB_FS.Init.battery_charging_enable = DISABLE;
   if (HAL_PCD_Init(&hpcd_USB_FS) != HAL_OK)
   {
-    Error_Handler( );
+    return USBD_FAIL;
   }
 
 #if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)

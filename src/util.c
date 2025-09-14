@@ -9,11 +9,6 @@
 #define NUM_ITOX8 16
 #define NUM_ITOX32 4
 
-void Error_Handler(void)
-{
-
-}
-
 void usb_send_data(const void *data, uint16_t len)
 {
     while (len > 0)

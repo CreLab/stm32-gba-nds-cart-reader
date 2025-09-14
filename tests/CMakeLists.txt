@@ -20,10 +20,10 @@ target_include_directories(stm32_data_mock PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(stm32_data_mock PRIVATE stm32_lib_interface)
 
 add_unit_test(test_nintendo_cartridge_reader
-        TEST_SOURCES nintendo_cartridge_reader_tests.cpp
-        TEST_SOURCE_FILE ${USB_LIB_SRC}
+        SOURCES nintendo_cartridge_reader_tests.cpp
+        SOURCE_FILE ${USB_LIB_SRC}
         MOCKING_OBJECTS stm32_data_mock
-        TEST_PREFIX "nintendo_cartridge_reader")
+        PREFIX "nintendo_cartridge_reader")
 
 add_dependencies(test_nintendo_cartridge_reader run_script)
 target_sources(test_nintendo_cartridge_reader PRIVATE ${CMAKE_SOURCE_DIR}/src/nds_cart_key.c)

@@ -42,14 +42,15 @@ static void hostif_reply_err(struct device_reply *const rp, const char *msg, ...
 
 void hostif_run(void)
 {
-    while (1) {
-        if (request_a_available) {
-            hostif_handle_request(request_a, reply);
-            request_a_available = false;
-        } else if (request_b_available) {
-            hostif_handle_request(request_b, reply);
-            request_b_available = false;
-        }
+    if (request_a_available)
+    {
+        hostif_handle_request(request_a, reply);
+        request_a_available = false;
+    }
+    else if (request_b_available)
+    {
+        hostif_handle_request(request_b, reply);
+        request_b_available = false;
     }
 }
 
