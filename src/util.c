@@ -5,7 +5,7 @@
 #include "usbd_cdc_if.h"
 #include "util.h"
 
-#define INT_TO_DISP_CHAR(i) (((i) <= 9) ? (char)('0' + (i)) : (char)('A' + (i) - 10))
+#define INT_TO_DISP_CHAR(i) (((i) <= 9) ? (char) ('0' + (i)) : (char) ('A' + (i) - 10))
 #define NUM_ITOX8 16
 #define NUM_ITOX32 4
 
@@ -75,10 +75,7 @@ void usb_printf(const char *msg, ...)
     va_end(args);
 }
 
-void uart_send_data(const void *data, uint16_t len)
-{
-    HAL_UART_Transmit(&huart1, (void *) data, len, HAL_MAX_DELAY);
-}
+void uart_send_data(const void *data, uint16_t len) { HAL_UART_Transmit(&huart1, (void *) data, len, HAL_MAX_DELAY); }
 
 void uart_print_bytes(const void *data, uint16_t len)
 {
@@ -173,8 +170,7 @@ void print_keybuf(const char *pMsg, s_blowfish_t *pKeyBuf)
     uart_printf("\r\n");
 }
 
-void __assert_func(const char *file, int line, const char *func,
-                   const char *failedexpr)
+void __assert_func(const char *file, int line, const char *func, const char *failedexpr)
 {
     uart_printf("ASSERTION FAILED:\n  EXPR: %s\n  FILE: %s\n  FUNC: %s\n  LINE: %d", failedexpr, file, func, line);
 

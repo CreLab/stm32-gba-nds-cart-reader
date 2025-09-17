@@ -1,6 +1,6 @@
+#include "host_interface.h"
 #include "gba_cart.h"
 #include "nds_cart.h"
-#include "host_interface.h"
 
 typedef struct s_gbaAddr_t
 {
@@ -25,7 +25,7 @@ typedef struct s_host_request_t
 
 typedef s_host_request_t s_device_reply_t;
 
-#define REQ_BUF_SIZE  sizeof(s_host_request_t)
+#define REQ_BUF_SIZE sizeof(s_host_request_t)
 #define REPL_BUF_SIZE sizeof(s_device_reply_t)
 
 static volatile bool isHostRequestAReady = false;
@@ -46,10 +46,11 @@ s_ndsAddr_t nds = {
 };
 
 static uint16_t hostInterface_checkPayloadSize(uint16_t length);
-static GLOBAL_STATUS hostInterface_checkRequestPackageLength(const s_host_request_t* rq, s_device_reply_t* rp, uint16_t length, const char* msg);
-static GLOBAL_STATUS hostInterface_handle_request(s_host_request_t* rq, s_device_reply_t* rp);
+static GLOBAL_STATUS hostInterface_checkRequestPackageLength(const s_host_request_t *rq, s_device_reply_t *rp,
+                                                             uint16_t length, const char *msg);
+static GLOBAL_STATUS hostInterface_handle_request(s_host_request_t *rq, s_device_reply_t *rp);
 static GLOBAL_STATUS hostInterface_send_reply(void);
-static void hostInterface_reply_err(s_device_reply_t* rp, const char* msg, ...);
+static void hostInterface_reply_err(s_device_reply_t *rp, const char *msg, ...);
 
 GLOBAL_STATUS hostInterface_run(void)
 {
@@ -71,12 +72,12 @@ EXIT:
     return status;
 }
 
-GLOBAL_STATUS hostInterface_data_receive(const uint8_t* data, uint16_t size)
+GLOBAL_STATUS hostInterface_data_receive(const uint8_t *data, uint16_t size)
 {
     GLOBAL_STATUS status = ERROR_STATE_NONE;
 
     static uint8_t request_receive_buffer[REQ_BUF_SIZE];
-    static const s_host_request_t* request_receive = (s_host_request_t*) request_receive_buffer;
+    static const s_host_request_t *request_receive = (s_host_request_t *) request_receive_buffer;
     static uint16_t request_receive_pos = 0;
     static bool buffer_overflow = false;
 
@@ -103,7 +104,7 @@ GLOBAL_STATUS hostInterface_data_receive(const uint8_t* data, uint16_t size)
     }
 
     memcpy(request_receive_buffer + request_receive_pos, data, size);
-    request_receive_pos = (uint16_t)(request_receive_pos + size);
+    request_receive_pos = (uint16_t) (request_receive_pos + size);
 
     if (request_receive_pos < offsetof(s_device_reply_t, magic) + sizeof(uint16_t))
     {
@@ -135,9 +136,7 @@ GLOBAL_STATUS hostInterface_data_receive(const uint8_t* data, uint16_t size)
     {
         size_t bytes_to_copy = sizeof(s_host_request_t) + packet_len;
         memcpy(&sHostRequestA, request_receive_buffer, bytes_to_copy);
-        memmove(request_receive_buffer,
-                request_receive_buffer + bytes_to_copy,
-                request_receive_pos - bytes_to_copy);
+        memmove(request_receive_buffer, request_receive_buffer + bytes_to_copy, request_receive_pos - bytes_to_copy);
         request_receive_pos = (uint16_t) (request_receive_pos - bytes_to_copy);
         isHostRequestAReady = true;
 
@@ -148,9 +147,7 @@ GLOBAL_STATUS hostInterface_data_receive(const uint8_t* data, uint16_t size)
     {
         size_t bytes_to_copy = sizeof(s_host_request_t) + packet_len;
         memcpy(&sHostRequestB, request_receive_buffer, bytes_to_copy);
-        memmove(request_receive_buffer,
-                request_receive_buffer + bytes_to_copy,
-                request_receive_pos - bytes_to_copy);
+        memmove(request_receive_buffer, request_receive_buffer + bytes_to_copy, request_receive_pos - bytes_to_copy);
         request_receive_pos = (uint16_t) (request_receive_pos - bytes_to_copy);
         isHostRequestBReady = true;
     }
@@ -170,7 +167,8 @@ static uint16_t hostInterface_checkPayloadSize(uint16_t length)
     return length;
 }
 
-static GLOBAL_STATUS hostInterface_checkRequestPackageLength(const s_host_request_t* rq, s_device_reply_t* rp, uint16_t length, const char* msg)
+static GLOBAL_STATUS hostInterface_checkRequestPackageLength(const s_host_request_t *rq, s_device_reply_t *rp,
+                                                             uint16_t length, const char *msg)
 {
     GLOBAL_STATUS status = ERROR_STATE_NONE;
 
@@ -185,7 +183,7 @@ EXIT:
     return status;
 }
 
-static GLOBAL_STATUS hostInterface_handle_request(s_host_request_t* rq, s_device_reply_t* rp)
+static GLOBAL_STATUS hostInterface_handle_request(s_host_request_t *rq, s_device_reply_t *rp)
 {
     GLOBAL_STATUS status = ERROR_STATE_NONE;
 
@@ -197,26 +195,27 @@ static GLOBAL_STATUS hostInterface_handle_request(s_host_request_t* rq, s_device
     switch (rq->type)
     {
         case HOST_REQ_ROM_SEEK:
-            CHECK_GLOBAL_STATUS(hostInterface_checkRequestPackageLength(&rq, &rp, 4, "ERROR: gba rom address seek: len != 4: %s"));
+            CHECK_GLOBAL_STATUS(
+                    hostInterface_checkRequestPackageLength(&rq, &rp, 4, "ERROR: gba rom address seek: len != 4: %s"));
 
-            gba.rom_word_addr = (size_t) (rq->data[0] | (rq->data[1] << 8) | (rq->data[2] << 16) | (
-                                              rq->data[3] << 24));
+            gba.rom_word_addr = (size_t) (rq->data[0] | (rq->data[1] << 8) | (rq->data[2] << 16) | (rq->data[3] << 24));
             gba.rom_word_addr >>= 1;
             rp->type = DEV_REPL_ROM_SEEK;
             rp->len = 0;
             break;
         case HOST_REQ_ROM_READ:
-            CHECK_GLOBAL_STATUS(hostInterface_checkRequestPackageLength(&rq, &rp, 2, "ERROR: gba rom read len: len != 2: %s"));
+            CHECK_GLOBAL_STATUS(
+                    hostInterface_checkRequestPackageLength(&rq, &rp, 2, "ERROR: gba rom read len: len != 2: %s"));
 
-            len = hostInterface_checkPayloadSize((uint16_t)(rq->data[0] | (rq->data[1] << 8)));
-            gba_cart_rom_read(gba.rom_word_addr, (uint16_t*)rp->data, len / 2);
-            gba.rom_word_addr += (uint16_t)(len / 2);
+            len = hostInterface_checkPayloadSize((uint16_t) (rq->data[0] | (rq->data[1] << 8)));
+            gba_cart_rom_read(gba.rom_word_addr, (uint16_t *) rp->data, len / 2);
+            gba.rom_word_addr += (uint16_t) (len / 2);
             rp->type = DEV_REPL_ROM_READ;
             rp->len = len;
             break;
         case HOST_REQ_ROM_WRITE:
             len = hostInterface_checkPayloadSize(rq->len);
-            gba_cart_rom_write(gba.rom_word_addr, (uint16_t*)rq->data, len / 2);
+            gba_cart_rom_write(gba.rom_word_addr, (uint16_t *) rq->data, len / 2);
             gba.rom_word_addr += (uint16_t) (len / 2);
             rp->type = DEV_REPL_ROM_WRITE;
             rp->len = 0;
@@ -224,24 +223,25 @@ static GLOBAL_STATUS hostInterface_handle_request(s_host_request_t* rq, s_device
         case HOST_REQ_ROM_SIZE:
             rp->type = DEV_REPL_ROM_SIZE;
             s = gba_cart_rom_size();
-            rp->data[0] = (uint8_t)s;
-            rp->data[1] = (uint8_t)(s >> 8);
-            rp->data[2] = (uint8_t)(s >> 16);
-            rp->data[3] = (uint8_t)(s >> 24);
+            rp->data[0] = (uint8_t) s;
+            rp->data[1] = (uint8_t) (s >> 8);
+            rp->data[2] = (uint8_t) (s >> 16);
+            rp->data[3] = (uint8_t) (s >> 24);
             rp->len = 4;
             break;
         case HOST_REQ_BKP_TYPE:
             rp->type = DEV_REPL_BKP_TYPE;
             s = gba_cart_save_size();
-            rp->data[0] = (uint8_t)s;
-            rp->data[1] = (uint8_t)(s >> 8);
-            rp->data[2] = (uint8_t)(s >> 16);
-            rp->data[3] = (uint8_t)(s >> 24);
+            rp->data[0] = (uint8_t) s;
+            rp->data[1] = (uint8_t) (s >> 8);
+            rp->data[2] = (uint8_t) (s >> 16);
+            rp->data[3] = (uint8_t) (s >> 24);
             rp->len = 4;
             break;
         case HOST_REQ_SRAM_SEEK:
         case HOST_REQ_FLASH_SEEK:
-            CHECK_GLOBAL_STATUS(hostInterface_checkRequestPackageLength(&rq, &rp, 2, "ERROR: gba sram address seek: len != 2: %s"));
+            CHECK_GLOBAL_STATUS(
+                    hostInterface_checkRequestPackageLength(&rq, &rp, 2, "ERROR: gba sram address seek: len != 2: %s"));
 
             gba.sram_byte_addr = (uint16_t) (rq->data[0] | (rq->data[1] << 8));
             if (rq->type == HOST_REQ_SRAM_SEEK)
@@ -256,9 +256,10 @@ static GLOBAL_STATUS hostInterface_handle_request(s_host_request_t* rq, s_device
             break;
         case HOST_REQ_SRAM_READ:
         case HOST_REQ_FLASH_READ:
-            CHECK_GLOBAL_STATUS(hostInterface_checkRequestPackageLength(&rq, &rp, 2, "ERROR: gba sram read len: len != 2: %s"));
+            CHECK_GLOBAL_STATUS(
+                    hostInterface_checkRequestPackageLength(&rq, &rp, 2, "ERROR: gba sram read len: len != 2: %s"));
 
-            len = hostInterface_checkPayloadSize((uint16_t)(rq->data[0] | (rq->data[1] << 8)));
+            len = hostInterface_checkPayloadSize((uint16_t) (rq->data[0] | (rq->data[1] << 8)));
 
             gba_cart_sram_read(gba.sram_byte_addr, rp->data, len);
             gba.sram_byte_addr = (uint16_t) (gba.sram_byte_addr + len);
@@ -308,7 +309,8 @@ static GLOBAL_STATUS hostInterface_handle_request(s_host_request_t* rq, s_device
             }
             break;
         case HOST_REQ_FLASH_BANK:
-            CHECK_GLOBAL_STATUS(hostInterface_checkRequestPackageLength(&rq, &rp, 1, "ERROR: gba flash bank: len != 2: %s"));
+            CHECK_GLOBAL_STATUS(
+                    hostInterface_checkRequestPackageLength(&rq, &rp, 1, "ERROR: gba flash bank: len != 2: %s"));
 
             gba_cart_flash_switch_bank(rq->data[0]);
             rp->type = DEV_REPL_FLASH_BANK;
@@ -316,7 +318,8 @@ static GLOBAL_STATUS hostInterface_handle_request(s_host_request_t* rq, s_device
             break;
         case HOST_REQ_EEPROM512_SEEK:
         case HOST_REQ_EEPROM8K_SEEK:
-            CHECK_GLOBAL_STATUS(hostInterface_checkRequestPackageLength(&rq, &rp, 2, "ERROR: gba eeprom address seek: len != 2: %s"));
+            CHECK_GLOBAL_STATUS(hostInterface_checkRequestPackageLength(
+                    &rq, &rp, 2, "ERROR: gba eeprom address seek: len != 2: %s"));
 
             gba.eeprom_block_addr = (uint16_t) (rq->data[0] | (rq->data[1] << 8));
             gba.eeprom_block_addr >>= 3;
@@ -342,7 +345,8 @@ static GLOBAL_STATUS hostInterface_handle_request(s_host_request_t* rq, s_device
             rp->len = 8;
             break;
         case HOST_REQ_EEPROM512_WRITE:
-            CHECK_GLOBAL_STATUS(hostInterface_checkRequestPackageLength(&rq, &rp, 8, "ERROR: gba eeprom512 write: len != 8: %s"));
+            CHECK_GLOBAL_STATUS(
+                    hostInterface_checkRequestPackageLength(&rq, &rp, 8, "ERROR: gba eeprom512 write: len != 8: %s"));
 
             if (gba_cart_eeprom_512_write_data(gba.eeprom_block_addr++, rq->data))
             {
@@ -356,7 +360,8 @@ static GLOBAL_STATUS hostInterface_handle_request(s_host_request_t* rq, s_device
             }
             break;
         case HOST_REQ_EEPROM8K_WRITE:
-            CHECK_GLOBAL_STATUS(hostInterface_checkRequestPackageLength(&rq, &rp,8, "ERROR: gba eeprom8k write: len != 8: %s"));
+            CHECK_GLOBAL_STATUS(
+                    hostInterface_checkRequestPackageLength(&rq, &rp, 8, "ERROR: gba eeprom8k write: len != 8: %s"));
 
             if (gba_cart_eeprom_8k_write_data(gba.eeprom_block_addr++, rq->data))
             {
@@ -374,17 +379,18 @@ static GLOBAL_STATUS hostInterface_handle_request(s_host_request_t* rq, s_device
             rp->len = 0;
             break;
         case HOST_REQ_NDS_ROM_SEEK:
-            CHECK_GLOBAL_STATUS(hostInterface_checkRequestPackageLength(&rq, &rp,4, "ERROR: nds rom seek len != 4: %s"));
+            CHECK_GLOBAL_STATUS(
+                    hostInterface_checkRequestPackageLength(&rq, &rp, 4, "ERROR: nds rom seek len != 4: %s"));
 
-            nds.rom_byte_addr = (size_t) (rq->data[0] | (rq->data[1] << 8) | (rq->data[2] << 16) | (
-                                              rq->data[3] << 24));
+            nds.rom_byte_addr = (size_t) (rq->data[0] | (rq->data[1] << 8) | (rq->data[2] << 16) | (rq->data[3] << 24));
             rp->type = DEV_REPL_NDS_ROM_SEEK;
             rp->len = 0;
             break;
         case HOST_REQ_NDS_ROM_READ:
-            CHECK_GLOBAL_STATUS(hostInterface_checkRequestPackageLength(&rq, &rp,2, "ERROR: nds rom read len != 2: %s"));
+            CHECK_GLOBAL_STATUS(
+                    hostInterface_checkRequestPackageLength(&rq, &rp, 2, "ERROR: nds rom read len != 2: %s"));
 
-            len = hostInterface_checkPayloadSize((uint16_t)(rq->data[0] | (rq->data[1] << 8)));
+            len = hostInterface_checkPayloadSize((uint16_t) (rq->data[0] | (rq->data[1] << 8)));
             nds_cart_rom_read(nds.rom_byte_addr, rp->data, len);
             nds.rom_byte_addr += len;
             rp->type = DEV_REPL_NDS_ROM_READ;
@@ -426,11 +432,11 @@ static GLOBAL_STATUS hostInterface_send_reply(void)
     return usb_send_data(&sDeviceReply, (uint16_t) (sizeof(s_device_reply_t) + sDeviceReply.len));
 }
 
-static void hostInterface_reply_err(s_device_reply_t* rp, const char* msg, ...)
+static void hostInterface_reply_err(s_device_reply_t *rp, const char *msg, ...)
 {
     va_list args;
     va_start(args, msg);
     rp->type = DEV_REPL_ERR;
-    rp->len = (uint16_t) vsnprintf((char* ) rp->data, XFER_MAX_PAYLOAD_SIZE, msg, args);
+    rp->len = (uint16_t) vsnprintf((char *) rp->data, XFER_MAX_PAYLOAD_SIZE, msg, args);
     va_end(args);
 }
