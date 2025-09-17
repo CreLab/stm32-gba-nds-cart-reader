@@ -459,7 +459,7 @@ bool gba_cart_flash_erase(void)
     return true;
 }
 
-bool gba_cart_flash_write(uint16_t byte_addr, uint8_t *data, size_t len)
+bool gba_cart_flash_write(uint16_t byte_addr, uint8_t* data, size_t len)
 {
     //uart_printf("writing to addr=%s with len=%s\n", itox32(byte_addr), itox32(len));
     while (len-- > 0) {

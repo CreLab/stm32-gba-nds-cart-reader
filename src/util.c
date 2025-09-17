@@ -9,8 +9,10 @@
 #define NUM_ITOX8 16
 #define NUM_ITOX32 4
 
-void usb_send_data(const void *data, uint16_t len)
+GLOBAL_STATUS usb_send_data(const void *data, uint16_t len)
 {
+    GLOBAL_STATUS status = ERROR_STATE_NONE;
+
     while (len > 0)
     {
         uint16_t block_len = len;
@@ -29,11 +31,16 @@ void usb_send_data(const void *data, uint16_t len)
         memcpy(UserTxBufferFS, data, block_len);
         if (CDC_Transmit_FS(UserTxBufferFS, block_len) != USBD_OK)
         {
+            CHECK_GLOBAL_STATUS(ERROR_STATE_CDC_TRANSMIT_FAIL);
         }
 
         data = (const char *) data + block_len;
         len = (uint16_t) (len - block_len);
     }
+
+    status = ERROR_STATE_OK;
+EXIT:
+    return status;
 }
 
 void usb_print_bytes(const void *data, uint16_t len)

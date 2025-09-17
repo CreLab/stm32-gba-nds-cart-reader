@@ -6,39 +6,32 @@
 #include "host_interface.h"
 #include "usart.h"
 
-HAL_StatusTypeDef SystemClock_Config(void);
+HAL_StatusTypeDef systemClockConfig(void);
+void enableAllSystemClocks(void);
 
 int main(void)
 {
     HAL_Init();
 
-    SystemClock_Config();
+    systemClockConfig();
 
     MX_USB_DEVICE_Init();
     MX_USART1_UART_Init();
 
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOD_CLK_ENABLE();
-
-    __HAL_RCC_AFIO_CLK_ENABLE();
-
-    __HAL_AFIO_REMAP_SWJ_DISABLE();
+    enableAllSystemClocks();
 
     gba_cart_init();
     nds_cart_init();
 
     HAL_Delay(1000);
 
-    uart_printf("starting loop\r\n");
-
-    while (1) {
-        hostif_run();
+    while(true)
+    {
+         hostInterface_run();
     }
 }
 
-HAL_StatusTypeDef SystemClock_Config(void)
+HAL_StatusTypeDef systemClockConfig(void)
 {
     HAL_StatusTypeDef status = HAL_OK;
 
@@ -71,14 +64,17 @@ EXIT:
     return status;
 }
 
+void enableAllSystemClocks(void)
+{
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+    __HAL_RCC_AFIO_CLK_ENABLE();
+    __HAL_AFIO_REMAP_SWJ_DISABLE();
+}
+
 #ifdef  USE_FULL_ASSERT
-/**
- * @brief  Reports the name of the source file and the source line number
- *         where the assert_param error has occurred.
- * @param  file: pointer to the source file name
- * @param  line: assert_param error line source number
- * @retval None
- */
 void assert_failed(uint8_t *file, uint32_t line)
 { 
     uart_printf("ASSERT FAILED in file <%s> line #%lu\n", file, line);
