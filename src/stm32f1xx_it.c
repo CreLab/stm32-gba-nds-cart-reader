@@ -30,8 +30,8 @@
   *
   ******************************************************************************
   */
-#include "main.h"
 #include "stm32f1xx_it.h"
+#include "util.h"
 
 extern PCD_HandleTypeDef hpcd_USB_FS;
 

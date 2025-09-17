@@ -5,10 +5,7 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <util.h>
+#include "util.h"
 
 #define XFER_MAX_PAYLOAD_SIZE 4096
 
@@ -82,26 +79,8 @@ extern "C" {
 
 #define DEV_REPL_ERR 0x1F0
 
-struct host_request
-{
-    uint16_t magic;
-    uint16_t type;
-    uint16_t id;
-    uint16_t len;
-    uint8_t data[];
-};
-
-struct device_reply
-{
-    uint16_t magic;
-    uint16_t type;
-    uint16_t id;
-    uint16_t len;
-    uint8_t data[];
-};
-
-GLOBAL_STATUS hostif_run(void);
-GLOBAL_STATUS hostif_data_receive(const uint8_t *data, uint16_t size);
+GLOBAL_STATUS hostInterface_run(void);
+GLOBAL_STATUS hostInterface_data_receive(const uint8_t *data, uint16_t size);
 
 #ifdef __cplusplus
 }

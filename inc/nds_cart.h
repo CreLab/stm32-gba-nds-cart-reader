@@ -5,15 +5,7 @@
 extern "C" {
 #endif
 
-#include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
-
-void nds_cart_init(void);
-
-void nds_cart_cmd_chip_id(uint8_t data[4]); // returned bytes; 4
-void nds_cart_rom_read(size_t byte_addr, uint8_t *data, size_t len);
-bool nds_cart_rom_init(void);
+#include "util.h"
 
 extern unsigned char nds_cart_key[];
 extern unsigned char dsi_cart_key[];
@@ -133,6 +125,10 @@ struct nds_header
 _Static_assert(sizeof(struct nds_header) == 0x1000u, "wrongly sized nds_header struct");
 
 #define NDS_PROTOCOL_MSK 0x80000000u
+
+void nds_cart_init(void);
+void nds_cart_cmd_chip_id(uint8_t data[4]);
+void nds_cart_rom_read(size_t byte_addr, uint8_t *data, size_t len);
 
 #ifdef __cplusplus
 }

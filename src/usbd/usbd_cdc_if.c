@@ -15,10 +15,7 @@
  *
  ******************************************************************************
  */
-#include "../../inc/usbd/usbd_cdc_if.h"
-#include <stdbool.h>
-#include <util.h>
-
+#include "usbd_cdc_if.h"
 #include "host_interface.h"
 
 uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
@@ -60,7 +57,7 @@ static int8_t CDC_DeInit_FS(void) { return USBD_OK; }
 /*                                        4 - Space                            */
 /* 6      | bDataBits  |   1   | Number Data bits (5, 6, 7, 8 or 16).          */
 /*******************************************************************************/
-static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length)
+static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 {
     UNUSED(pbuf);
     UNUSED(length);
@@ -88,7 +85,7 @@ static int8_t CDC_Receive_FS(uint8_t *Buf, uint32_t *Len)
     USBD_StatusTypeDef status = USBD_FAIL;
 
     uint32_t len = *Len;
-    if (hostif_data_receive(Buf, (uint16_t) len) == ERROR_STATE_OK)
+    if (hostInterface_data_receive(Buf, (uint16_t) len) == ERROR_STATE_OK)
     {
         USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
         USBD_CDC_ReceivePacket(&hUsbDeviceFS);

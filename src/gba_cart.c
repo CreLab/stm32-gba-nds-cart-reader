@@ -1,30 +1,9 @@
-#include <stm32f1xx_hal.h>
-
 #include "gba_cart.h"
-#include "util.h"
+#include "hw_config.h"
 
-/*
- * Wiring:
- * PORTA[0..7]  <-> GBA_A[16..23]
- * PORTA[8]     <-> GBA_NWR
- * PORTA[13]    <-> GBA_NRD
- * PORTA[14]    <-> GBA_NCS
- * PORTA[15]    <-> GBA_NCS2
- *
- * PORTB[0..15] <-> GBA_AD[0..15]
- *
- * PORTC[12]    <-> LVL_SHIFT_A
- * PORTD[2]     <-> LVL_SHIFT_AD
- */
-
-#define PIN_NWR 8u
-#define PIN_NWR_MSK (1u << PIN_NWR)
-#define PIN_NRD 13u
-#define PIN_NRD_MSK (1u << PIN_NRD)
-#define PIN_NCS 14u
-#define PIN_NCS_MSK (1u << PIN_NCS)
-#define PIN_NCS2 15u
-#define PIN_NCS2_MSK (1u << PIN_NCS2)
+static bool gba_cart_get_eeprom_type(void);
+static void gba_cart_eeprom_read_data(uint16_t block_addr, uint8_t *data, bool large);
+static bool gba_cart_eeprom_write_data(uint16_t block_addr, const uint8_t *data, bool large);
 
 static size_t gba_cart_delay = 2;
 #define LVL_SHIFT_DELAY()                                                                          \
@@ -40,111 +19,38 @@ static size_t gba_cart_delay = 2;
     }                                                                                              \
     while (0)
 
-// #define LVL_SHIFT_DELAY() HAL_Delay(2)
-// #define GBA_CART_DELAY() HAL_Delay(2)
-
-#define EEPROM_WORD_ADDR 0xFFFF80
-
-__attribute__((always_inline)) static inline void adbus_level_dir_input(void)
+__STATIC_FORCEINLINE void adbus_dir_input(void)
 {
-    GPIOD->BSRR = 1u << 2u << 16u;
-}
-
-__attribute__((always_inline)) static inline void adbus_level_dir_output(void)
-{
-    GPIOD->BSRR = 1u << 2u;
-}
-
-__attribute__((always_inline)) static inline void uabus_level_dir_input(void)
-{
-    GPIOC->BSRR = 1u << 12u << 16u;
-}
-
-__attribute__((always_inline)) static inline void uabus_level_dir_output(void)
-{
-    GPIOC->BSRR = 1u << 12u;
-}
-
-__attribute__((always_inline)) static inline void adbus_dir_input(void)
-{
-    GPIOB->CRL = 0x44444444;
-    GPIOB->CRH = 0x44444444;
-    adbus_level_dir_input();
+    configDataLanesAsInput(GPIOB, E_PIN_GROUP_0_7);
+    configDataLanesAsInput(GPIOB, E_PIN_GROUP_8_15);
+    ADBUS_LEVEL_DIR_INPUT();
     LVL_SHIFT_DELAY();
 }
 
-__attribute__((always_inline)) static inline void adbus_dir_output(uint16_t init_value)
+__STATIC_FORCEINLINE void adbus_dir_output(uint16_t init_value)
 {
-    adbus_level_dir_output();
+    ADBUS_LEVEL_DIR_OUTPUT();
     LVL_SHIFT_DELAY();
     GPIOB->ODR = init_value;
-    GPIOB->CRL = 0x11111111;
-    GPIOB->CRH = 0x11111111;
+    configDataLanesAsOutput(GPIOB, E_PIN_GROUP_0_7);
+    configDataLanesAsOutput(GPIOB, E_PIN_GROUP_8_15);
     GBA_CART_DELAY();
 }
 
-__attribute__((always_inline)) static inline void uabus_dir_input(void)
+__STATIC_FORCEINLINE void uabus_dir_input(void)
 {
-    GPIOA->CRL = 0x44444444;
-    uabus_level_dir_input();
+    configDataLanesAsInput(GPIOA, E_PIN_GROUP_0_7);
+    UABUS_LEVEL_DIR_INPUT();
     LVL_SHIFT_DELAY();
 }
 
-__attribute__((always_inline)) static inline void uabus_dir_output(uint8_t init_value)
+__STATIC_FORCEINLINE void uabus_dir_output(uint8_t init_value)
 {
-    uabus_level_dir_output();
+    UABUS_LEVEL_DIR_OUTPUT();
     LVL_SHIFT_DELAY();
     uint8_t ninit_value = (uint8_t) ~init_value;
     GPIOA->BSRR = (uint32_t) (init_value | (ninit_value << 16));
-    GPIOA->CRL = 0x11111111;
-    GBA_CART_DELAY();
-}
-
-__attribute__((always_inline)) static inline void ncs_low(void)
-{
-    GPIOA->BSRR = PIN_NCS_MSK << 16;
-    GBA_CART_DELAY();
-}
-
-__attribute__((always_inline)) static inline void ncs_high(void)
-{
-    GPIOA->BSRR = PIN_NCS_MSK;
-    GBA_CART_DELAY();
-}
-
-__attribute__((always_inline)) static inline void ncs2_low(void)
-{
-    GPIOA->BSRR = PIN_NCS2_MSK << 16;
-    GBA_CART_DELAY();
-}
-
-__attribute__((always_inline)) static inline void ncs2_high(void)
-{
-    GPIOA->BSRR = PIN_NCS2_MSK;
-    GBA_CART_DELAY();
-}
-
-__attribute__((always_inline)) static inline void nrd_low(void)
-{
-    GPIOA->BSRR = PIN_NRD_MSK << 16;
-    GBA_CART_DELAY();
-}
-
-__attribute__((always_inline)) static inline void nrd_high(void)
-{
-    GPIOA->BSRR = PIN_NRD_MSK;
-    GBA_CART_DELAY();
-}
-
-__attribute__((always_inline)) static inline void nwr_low(void)
-{
-    GPIOA->BSRR = PIN_NWR_MSK << 16;
-    GBA_CART_DELAY();
-}
-
-__attribute__((always_inline)) static inline void nwr_high(void)
-{
-    GPIOA->BSRR = PIN_NWR_MSK;
+    configDataLanesAsOutput(GPIOA, E_PIN_GROUP_0_7);
     GBA_CART_DELAY();
 }
 
@@ -152,16 +58,19 @@ void gba_cart_init(void)
 {
     adbus_dir_input();
 
-    adbus_level_dir_input();
+    ADBUS_LEVEL_DIR_INPUT();
+
     MODIFY_REG(GPIOD->CRL, 0xF00u, 0x100u);
 
-    uabus_level_dir_input();
+    UABUS_LEVEL_DIR_INPUT();
+
     MODIFY_REG(GPIOC->CRH, 0xF0000u, 0x10000u);
 
-    ncs_high();
-    ncs2_high();
-    nrd_high();
-    nwr_high();
+    NCS_HIGH();
+    NCS2_HIGH();
+    NRD_HIGH();
+    NWR_HIGH();
+
     MODIFY_REG(GPIOA->CRH, 0xFFF0000Fu, 0x11100001u);
     uabus_dir_input();
 }
@@ -190,56 +99,6 @@ size_t gba_cart_rom_size()
             return base_addr << 1;
     }
     return 0x2000000;
-}
-
-static bool gba_cart_get_eeprom_type(void)
-{
-    static const int NBLK = 96;
-    uint8_t buffer[NBLK * 8];
-
-    for (int i = 0; i < NBLK; i++)
-    {
-        gba_cart_eeprom_8k_read_data((uint16_t) i, &buffer[i * 8]);
-    }
-
-    uint8_t ref = buffer[0];
-
-    for (int i = 8; i < (NBLK * 8); i += 8)
-    {
-        if (buffer[i] != ref)
-            return true;
-    }
-
-    for (int i = 1; i < (64 * 8); i += 1)
-    {
-        if (buffer[i] != ref)
-            return false;
-    }
-
-    for (int i = 0; i < 8; i++)
-    {
-        buffer[i] = (uint8_t) (i * 0x11);
-    }
-
-    gba_cart_eeprom_8k_write_data(0, buffer);
-    gba_cart_eeprom_8k_read_data(0, &buffer[0]);
-    gba_cart_eeprom_8k_read_data(1, &buffer[1]);
-
-    for (int i = 8; i < 16; i++)
-    {
-        if (buffer[i] != ref)
-        {
-            for (int j = 0; j < 64; j++)
-            {
-                gba_cart_eeprom_512_write_data((uint16_t) j, &buffer[j * 8 + 8]);
-            }
-            return false;
-        }
-    }
-
-    gba_cart_eeprom_8k_write_data(0, &buffer[8]);
-
-    return true;
 }
 
 size_t gba_cart_save_size()
@@ -313,29 +172,29 @@ void gba_cart_rom_read(uint32_t word_addr, uint16_t *data, size_t len)
     uint8_t word_addr_msb = (uint8_t) ((word_addr >> 16) & 0xFF);
     uabus_dir_output(word_addr_msb);
 
-    ncs_low();
+    NCS_LOW();
 
     adbus_dir_input();
 
     while (len-- > 0)
     {
-        nrd_low();
+        NRD_LOW();
 
         *data++ = (uint16_t) GPIOB->IDR;
         word_addr += 1;
 
-        nrd_high();
+        NRD_HIGH();
 
         if (word_addr >> 16 != word_addr_msb)
         {
             word_addr_msb = (uint8_t) ((word_addr >> 16) & 0xFF);
-            ncs_high();
+            NCS_HIGH();
             uabus_dir_output(word_addr_msb);
-            ncs_low();
+            NCS_LOW();
         }
     }
 
-    ncs_high();
+    NCS_HIGH();
     uabus_dir_input();
 }
 
@@ -352,26 +211,25 @@ void gba_cart_rom_write(uint32_t word_addr, const uint16_t *data, size_t len)
     uint8_t word_addr_msb = (uint8_t) ((word_addr >> 16) & 0xFF);
     uabus_dir_output(word_addr_msb);
 
-    ncs_low();
+    NCS_LOW();
 
     while (len-- > 0)
     {
         adbus_dir_output(*data++);
-        nwr_low();
-
-        nwr_high();
+        NWR_LOW();
+        NWR_HIGH();
         word_addr += 1;
 
         if (word_addr >> 16 != word_addr_msb)
         {
             word_addr_msb = (uint8_t) ((word_addr >> 16) & 0xFF);
-            ncs_high();
+            NCS_HIGH();
             uabus_dir_output(word_addr_msb);
-            ncs_low();
+            NCS_LOW();
         }
     }
 
-    ncs_high();
+    NCS_HIGH();
     adbus_dir_input();
     uabus_dir_input();
 }
@@ -386,11 +244,11 @@ void gba_cart_sram_read(uint16_t byte_addr, uint8_t *data, size_t len)
     while (len-- > 0)
     {
         adbus_dir_output(byte_addr++);
-        ncs2_low();
-        nrd_low();
+        NCS2_LOW();
+        NRD_LOW();
         *data++ = (uint8_t) GPIOA->IDR;
-        nrd_high();
-        ncs2_high();
+        NRD_HIGH();
+        NCS2_HIGH();
     }
 
     adbus_dir_input();
@@ -408,11 +266,11 @@ void gba_cart_sram_write(uint16_t byte_addr, const uint8_t *data, size_t len)
     while (len-- > 0)
     {
         adbus_dir_output(byte_addr++);
-        ncs2_low();
+        NCS2_LOW();
         uabus_dir_output(*data++);
-        nwr_low();
-        nwr_high();
-        ncs2_high();
+        NWR_LOW();
+        NWR_HIGH();
+        NCS2_HIGH();
     }
 
     adbus_dir_input();
@@ -469,6 +327,76 @@ void gba_cart_flash_switch_bank(uint8_t bank)
     gba_cart_sram_write_byte(0x2AAA, 0x55);
     gba_cart_sram_write_byte(0x5555, 0xB0);
     gba_cart_sram_write_byte(0x0, bank);
+}
+
+void gba_cart_eeprom_512_read_data(uint16_t block_addr, uint8_t *data)
+{
+    gba_cart_eeprom_read_data(block_addr, data, false);
+}
+
+bool gba_cart_eeprom_512_write_data(uint16_t block_addr, const uint8_t *data)
+{
+    return gba_cart_eeprom_write_data(block_addr, data, false);
+}
+
+void gba_cart_eeprom_8k_read_data(uint16_t block_addr, uint8_t *data)
+{
+    gba_cart_eeprom_read_data(block_addr, data, true);
+}
+
+bool gba_cart_eeprom_8k_write_data(uint16_t block_addr, const uint8_t *data)
+{
+    return gba_cart_eeprom_write_data(block_addr, data, true);
+}
+
+static bool gba_cart_get_eeprom_type(void)
+{
+    static const int NBLK = 96;
+    uint8_t buffer[NBLK * 8];
+
+    for (int i = 0; i < NBLK; i++)
+    {
+        gba_cart_eeprom_8k_read_data((uint16_t) i, &buffer[i * 8]);
+    }
+
+    uint8_t ref = buffer[0];
+
+    for (int i = 8; i < (NBLK * 8); i += 8)
+    {
+        if (buffer[i] != ref)
+            return true;
+    }
+
+    for (int i = 1; i < (64 * 8); i += 1)
+    {
+        if (buffer[i] != ref)
+            return false;
+    }
+
+    for (int i = 0; i < 8; i++)
+    {
+        buffer[i] = (uint8_t) (i * 0x11);
+    }
+
+    gba_cart_eeprom_8k_write_data(0, buffer);
+    gba_cart_eeprom_8k_read_data(0, &buffer[0]);
+    gba_cart_eeprom_8k_read_data(1, &buffer[1]);
+
+    for (int i = 8; i < 16; i++)
+    {
+        if (buffer[i] != ref)
+        {
+            for (int j = 0; j < 64; j++)
+            {
+                gba_cart_eeprom_512_write_data((uint16_t) j, &buffer[j * 8 + 8]);
+            }
+            return false;
+        }
+    }
+
+    gba_cart_eeprom_8k_write_data(0, &buffer[8]);
+
+    return true;
 }
 
 static void gba_cart_eeprom_read_data(uint16_t block_addr, uint8_t *data, bool large)
@@ -549,24 +477,4 @@ static bool gba_cart_eeprom_write_data(uint16_t block_addr, const uint8_t *data,
     }
     gba_cart_delay = gba_cart_delay_save;
     return true;
-}
-
-void gba_cart_eeprom_512_read_data(uint16_t block_addr, uint8_t *data)
-{
-    gba_cart_eeprom_read_data(block_addr, data, false);
-}
-
-bool gba_cart_eeprom_512_write_data(uint16_t block_addr, const uint8_t *data)
-{
-    return gba_cart_eeprom_write_data(block_addr, data, false);
-}
-
-void gba_cart_eeprom_8k_read_data(uint16_t block_addr, uint8_t *data)
-{
-    gba_cart_eeprom_read_data(block_addr, data, true);
-}
-
-bool gba_cart_eeprom_8k_write_data(uint16_t block_addr, const uint8_t *data)
-{
-    return gba_cart_eeprom_write_data(block_addr, data, true);
 }

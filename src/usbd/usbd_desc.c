@@ -15,8 +15,9 @@
  *
  ******************************************************************************
  */
-#include "../../inc/usbd/usbd_desc.h"
-#include "../../inc/usbd/usbd_conf.h"
+#include "usbd_core.h"
+#include "usbd_desc.h"
+#include "usbd_conf.h"
 #include "usbd_core.h"
 
 #define USBD_VID 1155
@@ -128,8 +129,11 @@ uint8_t *USBD_FS_ManufacturerStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *le
 uint8_t *USBD_FS_SerialStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length)
 {
     UNUSED(speed);
+
     *length = USB_SIZ_STRING_SERIAL;
+
     Get_SerialNum();
+
     return (uint8_t *) USBD_StringSerial;
 }
 

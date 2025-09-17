@@ -5,7 +5,14 @@
 extern "C" {
 #endif
 
+#include <assert.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "stm32f1xx_hal.h"
 
 #define GLOBAL_STATUS e_error_state
@@ -16,6 +23,14 @@ extern "C" {
         status = ret;                                                                              \
         goto EXIT;                                                                                 \
     }
+
+#define FORCE_INLINE __attribute__((always_inline)) inline
+
+typedef enum e_pin_group
+{
+    E_PIN_GROUP_0_7,
+    E_PIN_GROUP_8_15,
+} e_pin_group;
 
 typedef enum e_error_state
 {
@@ -36,9 +51,9 @@ typedef enum e_error_state
     ERROR_STATE_GPIO_INIT,
 } e_error_state;
 
-__attribute__((always_inline)) static inline void NOP(void) { __asm__("\tnop"); }
+__STATIC_FORCEINLINE void NOP(void) { __asm__("\tnop"); }
 
-__attribute__((always_inline)) static inline void WAIT(size_t x)
+__STATIC_FORCEINLINE void WAIT(size_t x)
 {
     // __asm__ volatile(
     //         ".Ldelay_loop_%=:\n\t"
@@ -58,56 +73,12 @@ GLOBAL_STATUS usb_send_data(const void *data, uint16_t len);
 GLOBAL_STATUS usb_print_bytes(const void *data, uint16_t len);
 GLOBAL_STATUS usb_printf(const char *msg, ...);
 
-GLOBAL_STATUS uart_send_data(const void *data, uint16_t len);
-GLOBAL_STATUS uart_print_bytes(const void *data, uint16_t len);
-GLOBAL_STATUS uart_printf(const char *msg, ...);
-
-GLOBAL_STATUS print_keybuf(const char *pMsg, s_blowfish_t *pKeyBuf);
-
 const char *itox8(uint8_t x);
 const char *itox32(uint32_t x);
 
 uint64_t bitrev_64(uint64_t x);
 
 #define ceil_div(num, den) (((num) + (den) - 1) / (den))
-
-#ifndef NDEBUG
-#define myassert(cond, fmt, ...)                                                                   \
-    do                                                                                             \
-    {                                                                                              \
-        if (!(cond))                                                                               \
-        {                                                                                          \
-            uart_printf("Assertion Failed in %s:%d function %s\r\n", __FILE__, __LINE__,           \
-                        __func__);                                                                 \
-            uart_printf((fmt), ##__VA_ARGS__);                                                     \
-            while (1)                                                                              \
-            {                                                                                      \
-                __asm__("nop");                                                                    \
-            }                                                                                      \
-        }                                                                                          \
-    }                                                                                              \
-    while (0)
-#else
-#define myassert(...)                                                                              \
-    do                                                                                             \
-    {                                                                                              \
-    }                                                                                              \
-    while (0)
-#endif
-
-#ifdef DEBUG
-#define DEBUG_PRINTF(pMsg, ...) uart_printf(pMsg, ##__VA_ARGS__)
-#define DEBUG_PRINT(pMsg) uart_printf(pMsg, NULL)
-#else
-#define DEBUG_PRINTF(pMsg, ...)
-#define DEBUG_PRINT(pMsg)
-#endif
-
-#ifdef DEBUG
-#define PRINT_KEY_BUFFER(pMsg, pBuf) print_keybuf(pMsg, pBuf)
-#else
-#define PRINT_KEY_BUFFER(pMsg, pBuf)
-#endif
 
 #define WALGN __attribute__((aligned(4)))
 

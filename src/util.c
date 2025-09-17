@@ -1,7 +1,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "usart.h"
 #include "usbd_cdc_if.h"
 #include "util.h"
 
@@ -80,62 +79,6 @@ GLOBAL_STATUS usb_printf(const char *msg, ...)
     int len = vsnprintf(out, sizeof(out), msg, args);
     CHECK_GLOBAL_STATUS(usb_send_data(out, (uint16_t) len));
 
-    status = ERROR_STATE_OK;
-EXIT:
-    return status;
-}
-
-GLOBAL_STATUS uart_send_data(const void *data, uint16_t len)
-{
-    GLOBAL_STATUS status = ERROR_STATE_NONE;
-
-    if (HAL_UART_Transmit(&huart1, (void *) data, len, HAL_MAX_DELAY) != HAL_OK)
-    {
-        CHECK_GLOBAL_STATUS(ERROR_STATE_UART_TRANSMIT_FAIL);
-    }
-
-    status = ERROR_STATE_OK;
-EXIT:
-    return status;
-}
-
-GLOBAL_STATUS uart_print_bytes(const void *data, uint16_t len)
-{
-    GLOBAL_STATUS status = ERROR_STATE_NONE;
-
-    if (len > 64)
-    {
-        len = 64;
-    }
-
-    char out[256] = {0};
-    out[0] = '\0';
-    const char *input = data;
-
-    while (len-- > 0)
-    {
-        strcat(out, itox8((uint8_t) *input++));
-        strcat(out, ",");
-    }
-
-    CHECK_GLOBAL_STATUS(uart_printf("%s\r\n", out));
-
-    status = ERROR_STATE_OK;
-EXIT:
-    return status;
-}
-
-GLOBAL_STATUS uart_printf(const char *msg, ...)
-{
-    GLOBAL_STATUS status = ERROR_STATE_NONE;
-
-    va_list args;
-    va_start(args, msg);
-
-    char out[256] = {0};
-    int len = vsnprintf(out, sizeof(out), msg, args);
-    CHECK_GLOBAL_STATUS(usb_send_data(out, (uint16_t) len));
-
     va_end(args);
 
     status = ERROR_STATE_OK;
@@ -188,35 +131,4 @@ uint64_t bitrev_64(uint64_t x)
     }
 
     return result;
-}
-
-GLOBAL_STATUS print_keybuf(const char *pMsg, s_blowfish_t *pKeyBuf)
-{
-    GLOBAL_STATUS status = ERROR_STATE_NONE;
-
-    const uint8_t *keybuf = (const uint8_t *) pKeyBuf;
-
-    uart_printf("%s:\r\n", pMsg);
-
-    for (size_t i = 0; i < sizeof(s_blowfish_t); i++)
-    {
-        uart_printf(" %02x", keybuf[i]);
-    }
-
-    CHECK_GLOBAL_STATUS(uart_printf("\r\n"));
-
-    status = ERROR_STATE_OK;
-EXIT:
-    return status;
-}
-
-void __assert_func(const char *file, int line, const char *func, const char *failedexpr)
-{
-    uart_printf("ASSERTION FAILED:\n  EXPR: %s\n  FILE: %s\n  FUNC: %s\n  LINE: %d", failedexpr,
-                file, func, line);
-
-    while (1)
-    {
-        __asm__ volatile("nop");
-    }
 }
