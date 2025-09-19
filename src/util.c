@@ -43,8 +43,10 @@ EXIT:
     return status;
 }
 
-void usb_print_bytes(const void *data, uint16_t len)
+GLOBAL_STATUS usb_print_bytes(const void *data, uint16_t len)
 {
+    GLOBAL_STATUS status = ERROR_STATE_NONE;
+
     if (len > 64)
     {
         len = 64;
@@ -60,25 +62,49 @@ void usb_print_bytes(const void *data, uint16_t len)
         strcat(out, ",");
     }
 
-    usb_printf("%s\r\n", out);
+    CHECK_GLOBAL_STATUS(usb_printf("%s\r\n", out));
+
+    status = ERROR_STATE_OK;
+EXIT:
+    return status;
 }
 
-void usb_printf(const char *msg, ...)
+GLOBAL_STATUS usb_printf(const char *msg, ...)
 {
+    GLOBAL_STATUS status = ERROR_STATE_NONE;
+
     va_list args;
     va_start(args, msg);
 
     char out[256] = {0};
     int len = vsnprintf(out, sizeof(out), msg, args);
-    usb_send_data(out, (uint16_t) len);
+    CHECK_GLOBAL_STATUS(usb_send_data(out, (uint16_t) len));
 
     va_end(args);
+
+    status = ERROR_STATE_OK;
+EXIT:
+    return status;
 }
 
-void uart_send_data(const void *data, uint16_t len) { HAL_UART_Transmit(&huart1, (void *) data, len, HAL_MAX_DELAY); }
-
-void uart_print_bytes(const void *data, uint16_t len)
+GLOBAL_STATUS uart_send_data(const void *data, uint16_t len)
 {
+    GLOBAL_STATUS status = ERROR_STATE_NONE;
+
+    if (HAL_UART_Transmit(&huart1, (void *) data, len, HAL_MAX_DELAY) != HAL_OK)
+    {
+        CHECK_GLOBAL_STATUS(ERROR_STATE_UART_TRANSMIT_FAIL);
+    }
+
+    status = ERROR_STATE_OK;
+EXIT:
+    return status;
+}
+
+GLOBAL_STATUS uart_print_bytes(const void *data, uint16_t len)
+{
+    GLOBAL_STATUS status = ERROR_STATE_NONE;
+
     if (len > 64)
     {
         len = 64;
@@ -94,19 +120,30 @@ void uart_print_bytes(const void *data, uint16_t len)
         strcat(out, ",");
     }
 
-    uart_printf("%s\r\n", out);
+    CHECK_GLOBAL_STATUS(uart_printf("%s\r\n", out));
+
+    status = ERROR_STATE_OK;
+EXIT:
+    return status;
 }
 
-void uart_printf(const char *msg, ...)
+GLOBAL_STATUS uart_printf(const char *msg, ...)
 {
+    GLOBAL_STATUS status = ERROR_STATE_NONE;
+
     va_list args;
     va_start(args, msg);
 
     char out[256] = {0};
     int len = vsnprintf(out, sizeof(out), msg, args);
-    uart_send_data(out, (uint16_t) len);
+    CHECK_GLOBAL_STATUS(uart_send_data(out, (uint16_t) len));
 
     va_end(args);
+
+    status = ERROR_STATE_OK;
+EXIT:
+    return status;
+
 }
 
 const char *itox8(uint8_t x)
@@ -156,8 +193,10 @@ uint64_t bitrev_64(uint64_t x)
     return result;
 }
 
-void print_keybuf(const char *pMsg, s_blowfish_t *pKeyBuf)
+GLOBAL_STATUS print_keybuf(const char *pMsg, s_blowfish_t *pKeyBuf)
 {
+    GLOBAL_STATUS status = ERROR_STATE_NONE;
+
     const uint8_t *keybuf = (const uint8_t *) pKeyBuf;
 
     uart_printf("%s:\r\n", pMsg);
@@ -167,7 +206,11 @@ void print_keybuf(const char *pMsg, s_blowfish_t *pKeyBuf)
         uart_printf(" %02x", keybuf[i]);
     }
 
-    uart_printf("\r\n");
+    CHECK_GLOBAL_STATUS(uart_printf("\r\n"));
+
+    status = ERROR_STATE_OK;
+EXIT:
+    return status;
 }
 
 void __assert_func(const char *file, int line, const char *func, const char *failedexpr)

@@ -37,6 +37,7 @@ typedef enum e_error_state
     ERROR_STATE_INVALID_PARAMETER,
     ERROR_STATE_ROM_NOT_INITIALIZED,
     ERROR_STATE_TIMEOUT,
+    ERROR_STATE_UART_TRANSMIT_FAIL,
 } e_error_state;
 
 __attribute__((always_inline)) static inline void NOP(void)
@@ -60,14 +61,14 @@ typedef struct {
 } s_blowfish_t;
 
 GLOBAL_STATUS usb_send_data(const void *data, uint16_t len);
-void usb_print_bytes(const void *data, uint16_t len);
-void usb_printf(const char *msg, ...);
+GLOBAL_STATUS usb_print_bytes(const void *data, uint16_t len);
+GLOBAL_STATUS usb_printf(const char *msg, ...);
 
-void uart_send_data(const void *data, uint16_t len);
-void uart_print_bytes(const void *data, uint16_t len);
-void uart_printf(const char *msg, ...);
+GLOBAL_STATUS uart_send_data(const void *data, uint16_t len);
+GLOBAL_STATUS uart_print_bytes(const void *data, uint16_t len);
+GLOBAL_STATUS uart_printf(const char *msg, ...);
 
-void print_keybuf(const char *pMsg, s_blowfish_t* pKeyBuf);
+GLOBAL_STATUS print_keybuf(const char *pMsg, s_blowfish_t* pKeyBuf);
 
 const char *itox8(uint8_t x);
 const char *itox32(uint32_t x);
