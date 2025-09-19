@@ -123,8 +123,8 @@ for file in $(find ./tmp -type f -name '*reference*'); do
     while IFS= read -r line; do
         if [[ "$line" == *"](."* ]]; then        
             line="${line/.\//.\/tmp\/}"
-            echo "$line" >> "./$filename"
         fi
+        echo "$line" >> "./$filename"
     done < "$file"
     
     rm "$file"
