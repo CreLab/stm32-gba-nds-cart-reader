@@ -42,85 +42,72 @@ rm -f "$TEMP_FILE"
 rm -rf "./tmp"
 mkdir ./tmp
 
-printf "Extract all chapters from Markdown...\n\n"
+printf "Extract all chapters from Markdown...\n"
 total=$(wc -l < "$OUTPUT_FILE")
 current=0
 
 while IFS= read -r line; do
     if [[ "$line" =~ ^\ {2}-+$ ]]; then
-		chapter_end=true
-	
-		if $chapter_started; then
-			mv "$TEMP_FILE" "./tmp/$chapter_name.md"
-			rm -f "$TEMP_FILE"
-			chapter_detected=false
-			chapter_started=false
-		fi
+        chapter_end=true
+    
+        if $chapter_started; then
+            mv "$TEMP_FILE" "./tmp/$chapter_name.md"
+            rm -f "$TEMP_FILE"
+            chapter_detected=false
+            chapter_started=false
+        fi
         continue
     fi
 
     if [[ -n $chapter_detected ]] && [[ "$line" =~ \[\]\{#([a-zA-Z0-9_-]+)\} ]]; then
         chapter_name="${BASH_REMATCH[1]}"
-		line="${line#*\}}"
-		echo "#$line" >> "$TEMP_FILE"
+        line="${line#*\}}"
+        echo "#$line" >> "$TEMP_FILE"
         chapter_detected=true
-		continue
+        continue
     fi
-	
-	if [[ "$line" == *"\\"* ]]; then
-		line="${line::-1}"
-	fi
-	
-	if [[ "$line" == *"["* ]]; then
-		line="- $line"
-	fi
+    
+    if [[ "$line" == *"\\"* ]]; then
+        line="${line::-1}"
+    fi
+    
+    if [[ "$line" == *"["* ]]; then
+        line="- $line"
+    fi
 
     if $chapter_detected; then
-		if [[ -n $chapter_started ]]; then
-			chapter_started=true
-		fi
-				
-		if [[ "$line" == *"](#"* ]]; then	
-			if [[ "$line" != *"["* ]]; then
-				truncate -s -1 "$TEMP_FILE"
-			fi
-			
-			fragment=$(echo "${line#*#}" | sed 's/[)\\]*$//')
-			filename="./${fragment}.md"
-			new_line="${line%%(*}"
-			
-			line="$new_line($filename)"
-			
-			echo "$line" >> "$TEMP_FILE"
-		elif [[ "$line" =~ https?://[^\ ]+ ]]; then		
-			# url="$line"
-			# 
-			# fragment="${url#*#}"
-			# fragment_clean=$(echo "$fragment" | sed 's/[)\\]*$//')
-			# filename="./${fragment_clean}.md"
-			# new_line="${line%%]*}]"
-			# 
-			# line="$new_line($filename)"
-			# 			
-			# truncate -s -1 "$TEMP_FILE"
-			# 
-			echo "$line" >> "$TEMP_FILE"
-		elif [[ "$line" == *"+--"* ]]; then
-			if $table_detected; then
-				echo "$line" >> "$TEMP_FILE"
-				echo "\`\`\`" >> "$TEMP_FILE"
-				table_detected=false
-			else				
-				echo "\`\`\`" >> "$TEMP_FILE"
-				echo "$line" >> "$TEMP_FILE"
-				table_detected=true
-			fi
-		else
-			echo "$line" >> "$TEMP_FILE"
-		fi
+        if [[ -n $chapter_started ]]; then
+            chapter_started=true
+        fi
+
+        if [[ "$line" == *"](#"* ]]; then    
+            if [[ "$line" != *"["* ]]; then
+                truncate -s -1 "$TEMP_FILE"
+            fi
+            
+            fragment=$(echo "${line#*#}" | sed 's/[)\\]*$//')
+            filename="./${fragment}.md"
+            new_line="${line%%(*}"
+            
+            line="$new_line($filename)"
+            
+            echo "$line" >> "$TEMP_FILE"
+        elif [[ "$line" == *"+--"* ]]; then
+            if $table_detected; then
+                echo "$line" >> "$TEMP_FILE"
+                echo "\`\`\`" >> "$TEMP_FILE"
+                table_detected=false
+            else                
+                echo "\`\`\`" >> "$TEMP_FILE"
+                echo "$line" >> "$TEMP_FILE"
+                table_detected=true
+            fi
+        else
+            echo "$line" >> "$TEMP_FILE"
+        fi
     fi
-	
-	((current++))
+    
+    ((current++))
     percent=$((current * 100 / total))
     printf "\rProcess Line %d of %d (%d%%)" "$current" "$total" "$percent"
 done < "$OUTPUT_FILE"
@@ -129,19 +116,18 @@ if $chapter_started && [[ -n "$chapter_name" ]]; then
     mv "$TEMP_FILE" "./tmp/$chapter_name.md"
 fi
 
-printf "Extract done...\n\n"
-
+printf "\nExtract all chapter references files...\n\n"
 for file in $(find ./tmp -type f -name '*reference*'); do
-	filename=$(basename "$file")
+    filename=$(basename "$file")
 
-	while IFS= read -r line; do
-		if [[ "$line" == *"](."* ]]; then		
-			line="${line/.\//.\/tmp\/}"
-			echo "$line" >> "./$filename"
-		fi
-	done < "$file"
-	
-	rm "$file"
+    while IFS= read -r line; do
+        if [[ "$line" == *"](."* ]]; then        
+            line="${line/.\//.\/tmp\/}"
+            echo "$line" >> "./$filename"
+        fi
+    done < "$file"
+    
+    rm "$file"
 done
 
 rm "./tmp/contents.md"
