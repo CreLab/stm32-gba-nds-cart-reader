@@ -28,16 +28,11 @@ fi
 printf "Get $INPUT_FILE... \n\n"
 wget -O "$INPUT_FILE" http://www.problemkaputt.de/gbatek.htm
 
-printf "Convert $INPUT_FILE to UTF-8...\n\n"
-file -i "$INPUT_FILE"
-iconv -f US-ASCII -t UTF-8 "$INPUT_FILE" -o "$UTF8_FILE"
+printf "Convert $INPUT_FILE to UTF-8...\n"
+iconv -f ISO-8859-1 -t UTF-8 "$INPUT_FILE" -o "$UTF8_FILE"
 
 printf "Convert HTML into Markdown...\n\n"
 pandoc -f html -t markdown -o "$OUTPUT_FILE" "$UTF8_FILE"
-
-rm "$UTF8_FILE"
-rm "$INPUT_FILE"
-rm -f "$TEMP_FILE"
 
 rm -rf "./tmp"
 mkdir ./tmp
@@ -47,6 +42,10 @@ total=$(wc -l < "$OUTPUT_FILE")
 current=0
 
 while IFS= read -r line; do
+    ((current++))
+    percent=$((current * 100 / total))
+    printf "\rProcess Line %d of %d (%d%%)" "$current" "$total" "$percent"
+
     if [[ "$line" =~ ^\ {2}-+$ ]]; then
         chapter_end=true
     
@@ -106,10 +105,6 @@ while IFS= read -r line; do
             echo "$line" >> "$TEMP_FILE"
         fi
     fi
-    
-    ((current++))
-    percent=$((current * 100 / total))
-    printf "\rProcess Line %d of %d (%d%%)" "$current" "$total" "$percent"
 done < "$OUTPUT_FILE"
 
 if $chapter_started && [[ -n "$chapter_name" ]]; then
@@ -119,6 +114,8 @@ fi
 printf "\nExtract all chapter references files...\n\n"
 for file in $(find ./tmp -type f -name '*reference*'); do
     filename=$(basename "$file")
+
+    rm ./$filename
 
     while IFS= read -r line; do
         if [[ "$line" == *"](."* ]]; then        
@@ -132,3 +129,6 @@ done
 
 rm "./tmp/contents.md"
 rm "$OUTPUT_FILE"
+rm "$UTF8_FILE"
+rm "$INPUT_FILE"
+rm -f "$TEMP_FILE"

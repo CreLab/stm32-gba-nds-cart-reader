@@ -1,8 +1,18 @@
+# DSi Reference
+
+
+**Basic Hardware Features (mostly same as NDS)**
 - [NDS Reference](./tmp/ndsreference.md)
 - [DSi Basic Differences to NDS](./tmp/dsibasicdifferencestonds.md)
+
+**New Hardware Features**
 - [DSi I/O Map](./tmp/dsiiomap.md)
+- [DSi Control Registers (./dsicontrolregistersscfg.md)
+- [DSi XpertTeak (./dsixpertteakdsp.md)
 - [DSi New Shared WRAM (for ARM7, ARM9,DSP)](./tmp/dsinewsharedwramforarm7arm9dsp.md)
+- [DSi New DMA (./dsinewdmandma.md)
 - [DSi Microphone and SoundExt](./tmp/dsimicrophoneandsoundext.md)
+- [DSi Advanced Encryption Standard(./dsiadvancedencryptionstandardaes.md)
 - [DSi Cartridge Header](./tmp/dsicartridgeheader.md)
 - [DSi Touchscreen/Sound Controller](./tmp/dsitouchscreensoundcontroller.md)
 - [DSi I2C Bus](./tmp/dsii2cbus.md)
@@ -17,6 +27,13 @@
 - [DSi Notes](./tmp/dsinotes.md)
 - [DSi Exploits](./tmp/dsiexploits.md)
 - [DSi Regions](./tmp/dsiregions.md)
+
+**General Info**
 - [ARM CPU Reference](./tmp/armcpureference.md)
 - [BIOS Functions](./tmp/biosfunctions.md)
 - [External Connectors](./tmp/externalconnectors.md)
+
+Credits: <http://www.dsibrew.org/wiki/Special:AllPages> (now spammed)
+
+
+

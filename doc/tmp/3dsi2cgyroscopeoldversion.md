@@ -96,7 +96,131 @@ register to 7 would give the following:
 
 FS_SEL Gyro Full-Scale Range:
 
-      0 Reserved (despite of being power-up default)
-      1 Reserved
-      2 Reserved
-      3 +/-2000
+```
++-----------------------------------------------------------------------+
+|       0 Reserved (despite of being power-up default)                  |
+|       1 Reserved                                                      |
+|       2 Reserved                                                      |
+|       3 +/-2000ø/sec (this should be used)                            |
++-----------------------------------------------------------------------+
+```
+
+DLPF_CFG, Low Pass Filter Bandwidth, Internal Sample Rate:
+
+```
++-----------------------------------------------------------------------+
+|       0 Internal Sample Rate=8kHz, Low Pass Filter Bandwidth=256Hz    |
+|       1 Internal Sample Rate=1kHz, Low Pass Filter Bandwidth=188Hz    |
+|       2 Internal Sample Rate=1kHz, Low Pass Filter Bandwidth=98Hz     |
+|       3 Internal Sample Rate=1kHz, Low Pass Filter Bandwidth=42Hz     |
+|       4 Internal Sample Rate=1kHz, Low Pass Filter Bandwidth=20Hz     |
+|       5 Internal Sample Rate=1kHz, Low Pass Filter Bandwidth=10Hz     |
+|       6 Internal Sample Rate=1kHz, Low Pass Filter Bandwidth=5Hz      |
+|       7 Reserved                                                      |
++-----------------------------------------------------------------------+
+```
+
+
+- **GYRO\[17h\] - Interrupt Enable and INT Pin Configuration (R/W)**
+
+```
++-----------------------------------------------------------------------+
+|       0  En                                                           |
+| able interrupt when new sample data is available           (1=Enable) |
+|       1  -                                                            |
+|       2  En                                                           |
+| able interrupt when PLL ready ;after changing clock source (1=Enable) |
+|       3  -                                                            |
+|       4  La                                                           |
+| tch clear method (0=Status register read only, 1=Any register read);\ 
+|       5  Latch                                                        |
+|  mode         (0=50us pulse, 1=latch until interrupt is cleared); INT |
+|       6  Drive                                                        |
+|  type for INT output pin  (0=push-pull, 1=open drain)           ; pin |
+|       7  Lo                                                           |
+| gic level for INT output pin (0=active high, 1=active low)         ;/ |
++-----------------------------------------------------------------------+
+```
+
+Unknown what the PLL ready IRQ is good for, maybe the whole I2C bus
+becomes unstable/inactive and shouldn\'t be used until receiving th
+IRQ?
+
+- **GYRO\[1Ah\] - Interrupt Status (R)**
+
+```
++-----------------------------------------------------------------------+
+|       0   New sample data is ready          (0=No, 1=Yes/IRQ)         |
+|       1   -                                                           |
+|       2   PLL clock source change ready     (0=No, 1=Yes/IRQ)         |
+|       3-7 -                                                           |
++-----------------------------------------------------------------------+
+```
+
+If the interrupt is not enabled, the associated status bit will NOT get
+set!
+- Interrupt Status bits are cleared after reading GYRO\[1Ah\] (o
+- optionally, if GYRO\[17h\].bit4=1, after reading any GYRO\[xxh\
+register).
+
+- **GYRO\[1Bh/1Ch\] - TEMP_OUT_H/L signed 16bit Temperature data (R)**
+- **GYRO\[1Dh/1Eh\] - GYRO_XOUT_H/L signed 16bit Gyro X output data (R)**
+- **GYRO\[1Fh/20h\] - GYRO_YOUT_H/L signed 16bit Gyro Y output data (R)**
+- **GYRO\[21h/22h\] - GYRO_ZOUT_H/L signed 16bit Gyro Y output data (R)**
+Sensor Registers. These values can be read at any time; however it is
+best to use the interrupt function to determine when new data is
+available.
+
+- **GYRO\[3Eh\] - Power Management (R/W)**
+
+```
++-----------------------------------------------------------------------+
+|       0-2 CLK_SEL  Select device clock source  (see below)            |
+|       3                                                               |
+|    STBY_ZG  Gyro Z standby mode  (0=Normal, 1=Standby)  ;\eg. disable 
+|       4                                                               |
+|    STBY_YG  Gyro Y standby mode  (0=Normal, 1=Standby)  ; unused axis |
+|       5                                                               |
+|  STBY_XG  Gyro X standby mode  (0=Normal, 1=Standby)  ;/to save power |
+|       6   SL                                                          |
+| EEP    Enable low power sleep mode (0=Normal, 1=Very low power sleep) |
+|       7   H_RE                                                        |
+| SET  Reset device and internal registers to power-up-default settings |
++-----------------------------------------------------------------------+
+```
+
+The CLK_SEL setting determines the device clock source as follows:
+
+```
++-----------------------------------------------------------------------+
+|       0 Inter                                                         |
+| nal oscillator (default on power-up, but unreliable, PLLs are better) |
+|       1 PLL with X Gyro reference                                     |
+|       2 PLL with Y Gyro reference                                     |
+|       3 PLL with Z Gyro reference                                     |
+|       4                                                               |
+| PLL with external 32.768kHz reference  ;\unknown if available in 3DS, 
+|       5                                                               |
+| PLL with external 19.2MHz reference    ;/maybe from 32KHz RTC output? |
+|       6 Reserved                                                      |
+|       7 Reserved                                                      |
++-----------------------------------------------------------------------+
+```
+
+
+**Gyro Datasheets (for ITG-3200 which is hopefully same as ITG-3270)**
+
+```
++-----------------------------------------------------------------------+
+|       Hard                                                            |
+| ware: ITG-3200-Datasheet.pdf    ITG-3200 Product Specification (v1.7) |
+|                                                                       |
+|      Software: ITG-3200-Register-Map.pdf ITG-3200 Register Map (v1.0) |
++-----------------------------------------------------------------------+
+```
+
+Older versions did include the Register Map in the Product
+Specification.
+
+
+

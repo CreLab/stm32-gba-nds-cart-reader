@@ -21,11 +21,6 @@ extern "C" {
         goto EXIT; \
         }
 
-#define CHECK_STATUS(ret) if (ret != HAL_OK) { \
-    status = ret; \
-    goto EXIT; \
-    }
-
 typedef enum e_error_state
 {
     ERROR_STATE_NONE = 0,
@@ -37,7 +32,9 @@ typedef enum e_error_state
     ERROR_STATE_INVALID_PARAMETER,
     ERROR_STATE_ROM_NOT_INITIALIZED,
     ERROR_STATE_TIMEOUT,
+    ERROR_STATE_UART_INIT,
     ERROR_STATE_UART_TRANSMIT_FAIL,
+    ERROR_STATE_GPIO_INIT,
 } e_error_state;
 
 __attribute__((always_inline)) static inline void NOP(void)

@@ -1,6 +1,12 @@
+# GBA Reference
+
+
+**Overview**
 - [GBA Technical Data](./tmp/gbatechnicaldata.md)
 - [GBA Memory Map](./tmp/gbamemorymap.md)
 - [GBA I/O Map](./tmp/gbaiomap.md)
+
+**Hardware Programming**
 - [GBA LCD Video Controller](./tmp/gbalcdvideocontroller.md)
 - [GBA Sound Controller](./tmp/gbasoundcontroller.md)
 - [GBA Timers](./tmp/gbatimers.md)
@@ -12,6 +18,11 @@
 - [GBA Cartridges](./tmp/gbacartridges.md)
 - [GBA Backwards Compatibility CGBMode](./tmp/gbabackwardscompatibilitycgbmode.md)
 - [GBA Unpredictable Things](./tmp/gbaunpredictablethings.md)
+
+**Other**
 - [ARM CPU Reference](./tmp/armcpureference.md)
 - [BIOS Functions](./tmp/biosfunctions.md)
 - [External Connectors](./tmp/externalconnectors.md)
+
+
+

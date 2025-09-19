@@ -47,27 +47,60 @@ static void print_chip_id(const struct nds_chip_id *id)
     uart_printf("chip_id: %02x %02x %02x %02x\r\n", bid[0], bid[1], bid[2], bid[3]);
 }
 
-__attribute__((always_inline)) static inline void clk_low(void) { GPIOC->BSRR = PIN_CLK_MSK << 16; }
+__attribute__((always_inline)) static inline void clk_low(void)
+{
+    GPIOC->BSRR = PIN_CLK_MSK << 16;
+}
 
-__attribute__((always_inline)) static inline void clk_high(void) { GPIOC->BSRR = PIN_CLK_MSK; }
+__attribute__((always_inline)) static inline void clk_high(void)
+{
+    GPIOC->BSRR = PIN_CLK_MSK;
+}
 
-__attribute__((always_inline)) static inline void romcs_low(void) { GPIOC->BSRR = PIN_ROMCS_MSK << 16; }
+__attribute__((always_inline)) static inline void romcs_low(void)
+{
+    GPIOC->BSRR = PIN_ROMCS_MSK << 16;
+}
 
-__attribute__((always_inline)) static inline void romcs_high(void) { GPIOC->BSRR = PIN_ROMCS_MSK; }
+__attribute__((always_inline)) static inline void romcs_high(void)
+{
+    GPIOC->BSRR = PIN_ROMCS_MSK;
+}
 
-__attribute__((always_inline)) static inline void reset_low(void) { GPIOC->BSRR = PIN_RESET_MSK << 16; }
+__attribute__((always_inline)) static inline void reset_low(void)
+{
+    GPIOC->BSRR = PIN_RESET_MSK << 16;
+}
 
-__attribute__((always_inline)) static inline void reset_high(void) { GPIOC->BSRR = PIN_RESET_MSK; }
+__attribute__((always_inline)) static inline void reset_high(void)
+{
+    GPIOC->BSRR = PIN_RESET_MSK;
+}
 
-__attribute__((always_inline)) static inline void eepromcs_low(void) { GPIOC->BSRR = PIN_EEPROMCS_MSK << 16; }
+__attribute__((always_inline)) static inline void eepromcs_low(void)
+{
+    GPIOC->BSRR = PIN_EEPROMCS_MSK << 16;
+}
 
-__attribute__((always_inline)) static inline void eepromcs_high(void) { GPIOC->BSRR = PIN_EEPROMCS_MSK; }
+__attribute__((always_inline)) static inline void eepromcs_high(void)
+{
+    GPIOC->BSRR = PIN_EEPROMCS_MSK;
+}
 
-__attribute__((always_inline)) static inline void data_dir_input(void) { GPIOC->CRL = 0x44444444; }
+__attribute__((always_inline)) static inline void data_dir_input(void)
+{
+    GPIOC->CRL = 0x44444444;
+}
 
-__attribute__((always_inline)) static inline uint8_t data_input(void) { return (uint8_t) GPIOC->IDR; }
+__attribute__((always_inline)) static inline uint8_t data_input(void)
+{
+    return (uint8_t) GPIOC->IDR;
+}
 
-__attribute__((always_inline)) static inline void data_dir_output() { GPIOC->CRL = 0x11111111; }
+__attribute__((always_inline)) static inline void data_dir_output()
+{
+    GPIOC->CRL = 0x11111111;
+}
 
 __attribute__((always_inline)) static inline void data_output(uint8_t v)
 {
@@ -94,17 +127,25 @@ __attribute__((always_inline)) static inline void data_out_cycle(uint8_t d, size
     wait_cycles(cycles);
 }
 
-__attribute__((always_inline)) static inline uint8_t data_in_cycle_42(void) { return data_in_cycle(8); }
+__attribute__((always_inline)) static inline uint8_t data_in_cycle_42(void)
+{
+    return data_in_cycle(8);
+}
 
 __attribute__((always_inline)) static inline uint8_t data_in_cycle_67(void)
 {
     return data_in_cycle(5);
-    ;
 }
 
-__attribute__((always_inline)) static inline void data_out_cycle_42(uint8_t d) { data_out_cycle(d, 8); }
+__attribute__((always_inline)) static inline void data_out_cycle_42(uint8_t d)
+{
+    data_out_cycle(d, 8);
+}
 
-__attribute__((always_inline)) static inline void data_out_cycle_67(uint8_t d) { data_out_cycle(d, 5); }
+__attribute__((always_inline)) static inline void data_out_cycle_67(uint8_t d)
+{
+    data_out_cycle(d, 5);
+}
 
 static void nds_cart_exec_command(uint64_t cmd, uint8_t *data, size_t len);
 
