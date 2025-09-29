@@ -1,6 +1,7 @@
 # STM32 GBA/NDS Cartridge Reader (Refactored Fork)
 
-This project is a refactored fork of [ipatix/stm32-gba-nds-cart-reader](https://github.com/ipatix/stm32-gba-nds-cart-reader),
+This project is a refactored fork
+of [ipatix/stm32-gba-nds-cart-reader](https://github.com/ipatix/stm32-gba-nds-cart-reader),
 built upon the original hardware design by ipatix. The corresponding PCB files and hardware
 documentation can be found in the related repository:
 [ipatix/stm32-gba-nds-cart-reader-pcb](https://github.com/ipatix/stm32-gba-nds-cart-reader-pcb).
@@ -29,8 +30,9 @@ This documentation covers technical details for various Nintendo handheld system
 - [CPU Technical Info](./doc/armcpureference.md)
 
 Please note:
+
 - The Markdown version is a static snapshot and may not reflect the latest updates.
-- To fetch a newer version of the documentation, you can run the included script: 
+- To fetch a newer version of the documentation, you can run the included script:
   `update_gbatek_docu.sh`.
 
 ## Purpose

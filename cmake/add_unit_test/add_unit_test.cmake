@@ -11,7 +11,7 @@ function(add_unit_test name)
     set(oneValueArgs OBJECT PREFIX LIBS)
     set(multiValueArgs SOURCES SOURCE_FILE MOCKING_OBJECTS)
     cmake_parse_arguments(ADD_UNIT_TEST "${options}" "${oneValueArgs}"
-                          "${multiValueArgs}" ${ARGN})
+            "${multiValueArgs}" ${ARGN})
 
     if (NOT ADD_UNIT_TEST_SOURCES)
         message(FATAL_ERROR "Missing SOURCES")
@@ -23,12 +23,12 @@ function(add_unit_test name)
 
     add_executable(${name})
     target_link_libraries(${name} PRIVATE
-                          Catch2::Catch2WithMain
-                          ApprovalTests::ApprovalTests
-                          ${ADD_UNIT_TEST_OBJECT}
-                          ${ADD_UNIT_TEST_MOCKING_OBJECTS}
-                          ${ADD_UNIT_TEST_LIBS}
-                          )
+            Catch2::Catch2WithMain
+            ApprovalTests::ApprovalTests
+            ${ADD_UNIT_TEST_OBJECT}
+            ${ADD_UNIT_TEST_MOCKING_OBJECTS}
+            ${ADD_UNIT_TEST_LIBS}
+    )
     target_sources(${name} PRIVATE ${ADD_UNIT_TEST_SOURCES})
     target_sources(${name} PRIVATE ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/approval_test_settings.cpp)
     target_link_options(${name} PRIVATE -Wl,--gc-sections)
@@ -48,7 +48,7 @@ function(add_unit_test name)
     elseif (ADD_UNIT_TEST_SOURCE_FILE)
         message(STATUS "Add Source Files: ")
 
-        foreach(test_file IN LISTS ADD_UNIT_TEST_SOURCE_FILE)
+        foreach (test_file IN LISTS ADD_UNIT_TEST_SOURCE_FILE)
             if (EXISTS ${test_file})
 
                 message(STATUS "${test_file}")
@@ -67,9 +67,9 @@ function(add_unit_test name)
             else ()
                 MESSAGE(FATAL_ERROR "SOURCE_FILE ${test_file} is not a file")
             endif ()
-        endforeach()
+        endforeach ()
 
-        target_link_options(${name} PRIVATE --coverage )
+        target_link_options(${name} PRIVATE --coverage)
     else ()
         target_compile_options(${name} PRIVATE --coverage)
         target_link_options(${name} PRIVATE --coverage)

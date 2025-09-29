@@ -2,6 +2,7 @@
 
 import argparse
 
+
 def convert_file_to_char_array(file_path, array_name, start_byte):
     try:
         with open(file_path, "rb") as f:
@@ -23,6 +24,7 @@ def convert_file_to_char_array(file_path, array_name, start_byte):
     except Exception as e:
         return f"Es ist ein Fehler aufgetreten: {e}"
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Konvertiere Binärdatei zu C-Array.")
     parser.add_argument("path", type=str, help="path to project source.")
@@ -30,7 +32,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     nds_cart_key = convert_file_to_char_array(f"{args.path}/bios/biosnds7.rom", "nds_cart_key", 48)
-    dsi_cart_key = convert_file_to_char_array(f"{args.path}/bios/biosdsi7.rom", "dsi_cart_key", 50896)
+    dsi_cart_key = convert_file_to_char_array(f"{args.path}/bios/biosdsi7.rom", "dsi_cart_key",
+                                              50896)
 
     with open(f"{args.path}/src/nds_cart_key.c", "w") as out_file:
         out_file.write(nds_cart_key)

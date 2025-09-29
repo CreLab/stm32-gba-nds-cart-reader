@@ -3,12 +3,14 @@
 import serial
 import sys
 
+
 def char_conv(x):
     if x <= 0x20:
         return '.'
     if x >= 0x80:
         return '.'
     return chr(x)
+
 
 def print_hex(x):
     while len(x) > 0:
@@ -22,11 +24,13 @@ def print_hex(x):
 
         binary_file.write(chunk_data)
 
+
 ser = serial.Serial('COM8', baudrate=115200, timeout=1)
 
 if not ser.isOpen():
     print("failed opening serial device")
     sys.exit(1)
+
 
 def exec_cmd(cmd, hexdump=False):
     request = bytearray(cmd)
@@ -48,6 +52,7 @@ def exec_cmd(cmd, hexdump=False):
         print("reply data:")
 
         print(reply_data)
+
 
 # NDS init command
 exec_cmd([0x57, 0x80, 0xB3, 0x00, 0x00, 0x00, 0x00, 0x00])

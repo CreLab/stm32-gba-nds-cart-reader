@@ -5,9 +5,9 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #define XFER_MAX_PAYLOAD_SIZE 4096
 
@@ -86,7 +86,8 @@ extern "C" {
 
 //////////////////////////////////////////////
 
-struct host_request {
+struct host_request
+{
     uint16_t magic;
     uint16_t type;
     uint16_t id;
@@ -94,7 +95,8 @@ struct host_request {
     uint8_t data[];
 };
 
-struct device_reply {
+struct device_reply
+{
     uint16_t magic;
     uint16_t type;
     uint16_t id;

@@ -14,16 +14,16 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
-if(NOT CMAKE_BUILD_TYPE)
+if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
-endif()
+endif ()
 
 set(CMAKE_PROJECT_NAME nintendo-cartridge-reader)
 set(CMAKE_PROJECT_INTERFACE cartridge-reader-interface)
 
-if(NOT ENABLE_UNIT_TESTS)
+if (NOT ENABLE_UNIT_TESTS)
     include("cmake/gcc-arm-none-eabi.cmake")
-endif()
+endif ()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
@@ -38,7 +38,7 @@ add_subdirectory(lib/usbd_lib)
 add_library(${CMAKE_PROJECT_INTERFACE} INTERFACE)
 target_include_directories(${CMAKE_PROJECT_INTERFACE} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_CURRENT_SOURCE_DIR}/inc/usbd)
 
-if(ENABLE_UNIT_TESTS)
+if (ENABLE_UNIT_TESTS)
     enable_language(CXX)
     add_compile_options(-fdata-sections -ffunction-sections)
 
@@ -61,4 +61,4 @@ else ()
             COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.bin
             COMMENT "Create ${CMAKE_PROJECT_NAME}.hex and ${CMAKE_PROJECT_NAME}.bin"
     )
-endif()
+endif ()

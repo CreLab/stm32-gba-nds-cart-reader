@@ -5,7 +5,7 @@
 #include "usbd_cdc_if.h"
 #include "util.h"
 
-#define INT_TO_DISP_CHAR(i) (((i) <= 9) ? (char)('0' + (i)) : (char)('A' + (i) - 10))
+#define INT_TO_DISP_CHAR(i) (((i) <= 9) ? (char) ('0' + (i)) : (char) ('A' + (i) - 10))
 #define NUM_ITOX8 16
 #define NUM_ITOX32 4
 
@@ -166,10 +166,10 @@ void print_keybuf(const char *pMsg, s_blowfish_t *pKeyBuf)
     uart_printf("\r\n");
 }
 
-void __assert_func(const char *file, int line, const char *func,
-                   const char *failedexpr)
+void __assert_func(const char *file, int line, const char *func, const char *failedexpr)
 {
-    uart_printf("ASSERTION FAILED:\n  EXPR: %s\n  FILE: %s\n  FUNC: %s\n  LINE: %d", failedexpr, file, func, line);
+    uart_printf("ASSERTION FAILED:\n  EXPR: %s\n  FILE: %s\n  FUNC: %s\n  LINE: %d", failedexpr,
+                file, func, line);
 
     while (1)
     {

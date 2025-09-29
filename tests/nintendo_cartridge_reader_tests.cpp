@@ -1,10 +1,11 @@
 #include "catch2\catch_all.hpp"
 
 extern "C" {
-    #include "util.h"
+#include "util.h"
 }
 
-TEST_CASE("usb_send_data sends correct data", "[usb]") {
+TEST_CASE("usb_send_data sends correct data", "[usb]")
+{
     uint8_t UserTxBufferFS[64];
 
     const char testData[] = "Hello USB!";
