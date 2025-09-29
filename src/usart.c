@@ -1,5 +1,5 @@
-#include "util.h"
 #include "usart.h"
+#include "util.h"
 
 UART_HandleTypeDef huart1;
 

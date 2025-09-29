@@ -5,9 +5,9 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
 #include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
 
 void nds_cart_init(void);
 
@@ -18,7 +18,8 @@ bool nds_cart_rom_init(void);
 extern unsigned char nds_cart_key[];
 extern unsigned char dsi_cart_key[];
 
-struct nds_romctrl {
+struct nds_romctrl
+{
     uint32_t gap1_len : 13;
     uint32_t key2_encypt_data : 1;
     uint32_t unk_14 : 1;
@@ -36,7 +37,8 @@ struct nds_romctrl {
 
 static_assert(sizeof(struct nds_romctrl) == 4, "nds_romctrl must be of size 4");
 
-struct nds_chip_id {
+struct nds_chip_id
+{
     uint32_t manufacturer : 8;
     uint32_t chip_size : 8;
     uint32_t infrared : 1;
@@ -53,11 +55,13 @@ struct nds_chip_id {
 
 static_assert(sizeof(struct nds_chip_id) == 4, "nds_chip_id must be of size 4");
 
-struct nds_header {
+struct nds_header
+{
     /* 0x0 */
     char game_title[12];
     /* 0xC */
-    union {
+    union
+    {
         char game_code[4];
         uint32_t game_code_uint;
     };
@@ -74,7 +78,8 @@ struct nds_header {
     /* 0x1C */
     uint8_t dsi_flags;
     /* 0x1D */
-    union {
+    union
+    {
         uint8_t nds_region;
         uint8_t dsi_permit_jump;
     };
@@ -129,7 +134,8 @@ struct nds_header {
     /* 0x74 */
     uint32_t arm7_auto_load_list_hoom_ram_address;
     /* 0x78 */
-    union {
+    union
+    {
         uint8_t secure_area_disable[8];
         uint32_t secure_area_disable_uint[2];
     };
