@@ -148,48 +148,33 @@ __attribute__((always_inline)) static inline void nwr_high(void)
     GBA_CART_DELAY();
 }
 
-/*
- * Init's all required GPIO's to access the ROM cartridge and may init specific variables
- */
 void gba_cart_init(void)
 {
-    // port B all pins Tri-Z
     adbus_dir_input();
 
-    // port D pin 2
-    // set output level LOW
     adbus_level_dir_input();
-    // set output push pull and speed 10 mhz
     MODIFY_REG(GPIOD->CRL, 0xF00u, 0x100u);
 
-    // port C pin 12
-    // set output level LOW
     uabus_level_dir_input();
-    // set output push pull and speed 10 mhz
     MODIFY_REG(GPIOC->CRH, 0xF0000u, 0x10000u);
 
-    // port A pin 8, 13, 14, 15
-    // set output level HIGH
     ncs_high();
     ncs2_high();
     nrd_high();
     nwr_high();
-    // set output push pull and speed 10 mhz
     MODIFY_REG(GPIOA->CRH, 0xFFF0000Fu, 0x11100001u);
-    // set pin 0..7 Tri-Z
     uabus_dir_input();
 }
 
 void gba_cart_test(void)
 {
-    // nothing here, add code if you want
+
 }
 
 size_t gba_cart_rom_size()
 {
     for (uint32_t i = 19; i < 24; i++)
     {
-        // each iteration checks if all address bits >= i result mirrors
         uint32_t base_addr = 1u << i;
         uint32_t errors = 0;
 
@@ -203,39 +188,19 @@ size_t gba_cart_rom_size()
 
         if (errors < 4)
             return base_addr << 1;
-        /*
-         * non-valid address ranges return High-Z's
-         * this will cause the written address to be read again
-         *
-         * since a non driven bus won't be that deterministic we have
-         * to tolerate a few errors
-         */
     }
     return 0x2000000;
 }
 
-/*
- * returns true for 8 KiB EEPROM, false for 512 B EEPROM
- *
- * The code below is implemented by a reverse engineering
- * Rudolph's GBA Backup Tool
- * I don't understand how it works, but it seems to work
- *
- * TODO NEEDS TESTING
- */
 static bool gba_cart_get_eeprom_type(void)
 {
     static const int NBLK = 96;
     uint8_t buffer[NBLK * 8];
 
-    // uart_printf("determine eeprom type...\n");
-
     for (int i = 0; i < NBLK; i++)
     {
         gba_cart_eeprom_8k_read_data((uint16_t) i, &buffer[i * 8]);
     }
-
-    // uart_printf("read 96 blocks\n");
 
     uint8_t ref = buffer[0];
 
@@ -245,17 +210,11 @@ static bool gba_cart_get_eeprom_type(void)
             return true;
     }
 
-    // uart_printf("first 8k check failed\n");
-
     for (int i = 1; i < (64 * 8); i += 1)
     {
         if (buffer[i] != ref)
             return false;
     }
-
-    // uart_printf("first 512 check failed\n");
-
-    // in this case writing to eeprom won't hurt since there isn't gonna be any data on there
 
     for (int i = 0; i < 8; i++)
     {
@@ -266,7 +225,6 @@ static bool gba_cart_get_eeprom_type(void)
     gba_cart_eeprom_8k_read_data(0, &buffer[0]);
     gba_cart_eeprom_8k_read_data(1, &buffer[1]);
 
-    // I have no clue why this would write back to the eeprom like that
     for (int i = 8; i < 16; i++)
     {
         if (buffer[i] != ref)
@@ -275,13 +233,12 @@ static bool gba_cart_get_eeprom_type(void)
             {
                 gba_cart_eeprom_512_write_data((uint16_t) j, &buffer[j * 8 + 8]);
             }
-            // uart_printf("succeeded final 512 test\n");
             return false;
         }
     }
 
     gba_cart_eeprom_8k_write_data(0, &buffer[8]);
-    // uart_printf("succeeded final 8k test\n");
+
     return true;
 }
 
@@ -303,7 +260,6 @@ size_t gba_cart_save_size()
                     cmp = buffer[j + 1];
                 if ((cmp & 0xFFFFFF) == ((*(uint32_t *) "OM_") & 0xFFFFFF))
                 {
-                    // found "EEPROM_" string
                     if (gba_cart_get_eeprom_type())
                         return 0x2000;
                     else
@@ -323,12 +279,10 @@ size_t gba_cart_save_size()
 
                 if (cmp == *(uint32_t *) "H1M_")
                 {
-                    // found "FLASH1M_" string
                     return 0x20000;
                 }
                 else if ((cmp & 0xFFFF) == (ptmp[0] & 0xFFFF))
                 {
-                    // found "FLASH_" string
                     return 0x10000;
                 }
             }
@@ -345,7 +299,6 @@ size_t gba_cart_save_size()
 
                 if ((cmp & 0xFF) == (ptmp[0] & 0xFF))
                 {
-                    // found "SRAM_" string
                     return 0x8000;
                 }
             }
@@ -356,22 +309,18 @@ size_t gba_cart_save_size()
 
 void gba_cart_rom_read(uint32_t word_addr, uint16_t *data, size_t len)
 {
-    // PORTA[0..7] and PORTB[0..15] are in Tri-Z initially
-    // set them to the address bits
     adbus_dir_output((uint16_t) (word_addr & 0xFFFF));
     uint8_t word_addr_msb = (uint8_t) ((word_addr >> 16) & 0xFF);
     uabus_dir_output(word_addr_msb);
 
-    // latch address
     ncs_low();
 
-    // remove address from data bus
     adbus_dir_input();
 
     while (len-- > 0)
     {
         nrd_low();
-        // read data
+
         *data++ = (uint16_t) GPIOB->IDR;
         word_addr += 1;
 
@@ -399,20 +348,17 @@ uint16_t gba_cart_rom_read_word(uint32_t word_addr)
 
 void gba_cart_rom_write(uint32_t word_addr, const uint16_t *data, size_t len)
 {
-    // PORTA[0..7] and PORTB[0..15] are in Tri-Z initially
-    // set them to the address bits
     adbus_dir_output((uint16_t) (word_addr & 0xFFFF));
     uint8_t word_addr_msb = (uint8_t) ((word_addr >> 16) & 0xFF);
     uabus_dir_output(word_addr_msb);
 
-    // latch address
     ncs_low();
 
     while (len-- > 0)
     {
         adbus_dir_output(*data++);
         nwr_low();
-        // TODO needs possibly more delay here?
+
         nwr_high();
         word_addr += 1;
 
@@ -437,7 +383,6 @@ void gba_cart_rom_write_word(uint32_t word_addr, uint16_t data)
 
 void gba_cart_sram_read(uint16_t byte_addr, uint8_t *data, size_t len)
 {
-    // TODO might need additional delay
     while (len-- > 0)
     {
         adbus_dir_output(byte_addr++);
@@ -460,7 +405,6 @@ uint8_t gba_cart_sram_read_byte(uint16_t byte_addr)
 
 void gba_cart_sram_write(uint16_t byte_addr, const uint8_t *data, size_t len)
 {
-    // TODO might need additional delay
     while (len-- > 0)
     {
         adbus_dir_output(byte_addr++);
@@ -500,7 +444,6 @@ bool gba_cart_flash_erase(void)
 
 bool gba_cart_flash_write(uint16_t byte_addr, uint8_t *data, size_t len)
 {
-    // uart_printf("writing to addr=%s with len=%s\n", itox32(byte_addr), itox32(len));
     while (len-- > 0)
     {
         gba_cart_sram_write_byte(0x5555, 0xAA);
@@ -528,10 +471,6 @@ void gba_cart_flash_switch_bank(uint8_t bank)
     gba_cart_sram_write_byte(0x0, bank);
 }
 
-/*
- * The large flag signals whether to access a "small" 512 byte or a large 8k byte eeprom
- * reads an 8 byte chunk
- */
 static void gba_cart_eeprom_read_data(uint16_t block_addr, uint8_t *data, bool large)
 {
     size_t gba_cart_delay_save = gba_cart_delay;

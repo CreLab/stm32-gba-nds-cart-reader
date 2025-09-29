@@ -10,7 +10,6 @@ extern "C" {
 #include <stdint.h>
 
 void gba_cart_init(void);
-
 void gba_cart_test(void);
 
 size_t gba_cart_rom_size();

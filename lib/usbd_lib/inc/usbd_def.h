@@ -17,7 +17,6 @@
  ******************************************************************************
  */
 
-/* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __USBD_DEF_H
 #define __USBD_DEF_H
 
@@ -25,21 +24,7 @@
 extern "C" {
 #endif
 
-/* Includes ------------------------------------------------------------------*/
 #include "../../../inc/usbd/usbd_conf.h"
-
-/** @addtogroup STM32_USBD_DEVICE_LIBRARY
- * @{
- */
-
-/** @defgroup USB_DEF
- * @brief general defines for the usb device library file
- * @{
- */
-
-/** @defgroup USB_DEF_Exported_Defines
- * @{
- */
 
 #ifndef NULL
 #define NULL 0U
@@ -125,14 +110,11 @@ extern "C" {
 #define USB_FS_MAX_PACKET_SIZE 64U
 #define USB_MAX_EP0_SIZE 64U
 
-/*  Device Status */
 #define USBD_STATE_DEFAULT 0x01U
 #define USBD_STATE_ADDRESSED 0x02U
 #define USBD_STATE_CONFIGURED 0x03U
 #define USBD_STATE_SUSPENDED 0x04U
 
-
-/*  EP0 State */
 #define USBD_EP0_IDLE 0x00U
 #define USBD_EP0_SETUP 0x01U
 #define USBD_EP0_DATA_IN 0x02U
@@ -145,16 +127,6 @@ extern "C" {
 #define USBD_EP_TYPE_ISOC 0x01U
 #define USBD_EP_TYPE_BULK 0x02U
 #define USBD_EP_TYPE_INTR 0x03U
-
-
-/**
- * @}
- */
-
-
-/** @defgroup USBD_DEF_Exported_TypesDefinitions
- * @{
- */
 
 typedef struct usb_setup_req
 {
@@ -193,7 +165,6 @@ typedef struct _Device_cb
 
 } USBD_ClassTypeDef;
 
-/* Following USB Device Speed */
 typedef enum
 {
     USBD_SPEED_HIGH = 0U,
@@ -201,7 +172,6 @@ typedef enum
     USBD_SPEED_LOW = 2U,
 } USBD_SpeedTypeDef;
 
-/* Following USB Device status */
 typedef enum
 {
     USBD_OK = 0U,
@@ -209,7 +179,6 @@ typedef enum
     USBD_FAIL,
 } USBD_StatusTypeDef;
 
-/* USB Device descriptors structure */
 typedef struct
 {
     uint8_t *(*GetDeviceDescriptor)(USBD_SpeedTypeDef speed, uint16_t *length);
@@ -224,7 +193,6 @@ typedef struct
 #endif
 } USBD_DescriptorsTypeDef;
 
-/* USB Device handle structure */
 typedef struct
 {
     uint32_t status;
@@ -234,7 +202,6 @@ typedef struct
     uint32_t maxpacket;
 } USBD_EndpointTypeDef;
 
-/* USB Device handle structure */
 typedef struct _USBD_HandleTypeDef
 {
     uint8_t id;
@@ -261,21 +228,12 @@ typedef struct _USBD_HandleTypeDef
     void *pData;
 } USBD_HandleTypeDef;
 
-/**
- * @}
- */
-
-
-/** @defgroup USBD_DEF_Exported_Macros
- * @{
- */
 #define SWAPBYTE(addr) (uint16_t) (((uint16_t) ((addr)[1]) << 8) | (addr)[0])
 
 #define LOBYTE(x) ((uint8_t) ((x) & 0x00FFU))
 #define HIBYTE(x) ((uint8_t) (((x) & 0xFF00U) >> 8U))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
-
 
 #if defined(__GNUC__)
 #ifndef __weak
@@ -285,10 +243,6 @@ typedef struct _USBD_HandleTypeDef
 #define __packed __attribute__((__packed__))
 #endif /* __packed */
 #endif /* __GNUC__ */
-
-
-/* In HS mode and when the DMA is used, all variables and data structures dealing
-   with the DMA during the transaction process should be 4-bytes aligned */
 
 #if defined(__GNUC__) && !defined(__CC_ARM) /* GNU Compiler */
 #ifndef __ALIGN_END
@@ -310,38 +264,10 @@ typedef struct _USBD_HandleTypeDef
 #endif /* __ALIGN_BEGIN */
 #endif /* __GNUC__ */
 
-
-/**
- * @}
- */
-
-/** @defgroup USBD_DEF_Exported_Variables
- * @{
- */
-
-/**
- * @}
- */
-
-/** @defgroup USBD_DEF_Exported_FunctionsPrototype
- * @{
- */
-
-/**
- * @}
- */
-
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* __USBD_DEF_H */
 
-/**
- * @}
- */
-
-/**
- * @}
- */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
