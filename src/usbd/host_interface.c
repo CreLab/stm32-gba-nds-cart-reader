@@ -10,8 +10,6 @@
 #define REQ_BUF_SIZE (XFER_MAX_PAYLOAD_SIZE + sizeof(struct host_request))
 #define REPL_BUF_SIZE (XFER_MAX_PAYLOAD_SIZE + sizeof(struct device_reply))
 
-// Transfer variables
-
 static uint8_t request_buffer_a[REQ_BUF_SIZE];
 static uint8_t request_buffer_b[REQ_BUF_SIZE];
 static struct host_request *const request_a = (struct host_request *) request_buffer_a;
@@ -21,8 +19,6 @@ static volatile bool request_b_available = false;
 
 static uint8_t reply_buffer[REPL_BUF_SIZE];
 static struct device_reply *const reply = (struct device_reply *) reply_buffer;
-
-// private variables
 
 struct
 {
@@ -35,8 +31,6 @@ struct
 {
     size_t rom_byte_addr;
 } nds;
-
-// private functions
 
 static void hostif_handle_request(struct host_request *const rq, struct device_reply *const rp);
 static void hostif_send_reply(void);
@@ -340,11 +334,6 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
 static void hostif_send_reply(void)
 {
     usb_send_data(reply, (uint16_t) (sizeof(struct device_reply) + reply->len));
-    // uart_printf("start reply\n");
-    // uart_printf("magic: %s\n", itox32(reply->magic));
-    // uart_printf("type: %s\n", itox32(reply->type));
-    // uart_printf("id: %s\n", itox32(reply->id));
-    // uart_printf("len: %s\n", itox32(reply->len));
 }
 
 static void hostif_reply_err(struct device_reply *const rp, const char *msg, ...)
@@ -369,7 +358,6 @@ void hostif_data_receive(const uint8_t *data, uint16_t size)
 
     if (buffer_overflow)
     {
-        // if the buffer get's overrun to heavily, flush it to be able to resync
         request_receive_pos = 0;
         buffer_overflow = false;
     }
@@ -386,17 +374,11 @@ void hostif_data_receive(const uint8_t *data, uint16_t size)
     memcpy(request_receive_buffer + request_receive_pos, data, size);
     request_receive_pos = (uint16_t) (request_receive_pos + size);
 
-    // okay received chunk, check if header is valid
     if (request_receive_pos < offsetof(struct device_reply, magic) + sizeof(uint16_t))
         return;
 
-    // usb_printf("magic=%s", itox32(request_receive->magic));
-
     while (request_receive->magic != HOST_REQ_MAGIC)
     {
-        // illegal magic
-        // TODO this could be made possibly more efficient
-        // this shouldn't only be relevant however during the intial sync phase
         memmove(&request_receive_buffer[0], &request_receive_buffer[1],
                 (size_t) (request_receive_pos - 1));
         request_receive_pos--;
@@ -411,10 +393,8 @@ void hostif_data_receive(const uint8_t *data, uint16_t size)
     if (request_receive_pos < packet_len + sizeof(struct host_request))
         return;
 
-    // enough data, okay, transfer data on next occasion
     if (request_a_available == false)
     {
-        // free slot to read data to
         size_t bytes_to_copy = sizeof(struct host_request) + packet_len;
         memcpy(request_a, request_receive_buffer, bytes_to_copy);
         memmove(request_receive_buffer, request_receive_buffer + bytes_to_copy,
@@ -425,7 +405,6 @@ void hostif_data_receive(const uint8_t *data, uint16_t size)
     }
     if (request_b_available == false)
     {
-        // free slot to read data to
         size_t bytes_to_copy = sizeof(struct host_request) + packet_len;
         memcpy(request_b, request_receive_buffer, bytes_to_copy);
         memmove(request_receive_buffer, request_receive_buffer + bytes_to_copy,

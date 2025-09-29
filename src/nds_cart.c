@@ -117,7 +117,6 @@ __attribute__((always_inline)) static inline uint8_t data_in_cycle_42(void)
 __attribute__((always_inline)) static inline uint8_t data_in_cycle_67(void)
 {
     return data_in_cycle(5);
-    ;
 }
 
 __attribute__((always_inline)) static inline void data_out_cycle_42(uint8_t d)
@@ -206,10 +205,6 @@ static struct
     uint64_t key2_y;
 } nds_cart_state;
 
-/*
- * Init's all required GPIO's to access the ROM cartridge and Flash/EEPROM
- */
-
 static void nds_cart_reset(void)
 {
     reset_low();
@@ -224,7 +219,6 @@ static void nds_cart_reset(void)
     nds_cart_state.nds = true;
     nds_cart_state.dsi = false;
     nds_cart_state.has_secure_area = true;
-    // gaps below add up to GBATEK's 0x910 gap
     nds_cart_state.normal_gap1 = 0x8F8;
     nds_cart_state.key1_gap1 = 0x8F8;
     nds_cart_state.normal_gap2 = 0x18;
@@ -233,33 +227,22 @@ static void nds_cart_reset(void)
 
 static void nds_cart_begin_key1(void)
 {
-    // init blowfish for secure area loading
     myassert(nds_cart_state.state == NDS_CART_RAW,
              "cart must be in raw mode before beginning key1\r\n", NULL);
 
     uint32_t secure_area_disable[2] = {nds_cart_state.secure_area_disable[0],
                                        nds_cart_state.secure_area_disable[1]};
 
-    // TODO first two of these commands can probably be removed
     key1_init_keycode(nds_cart_state.game_code, 1, 8, false);
     key1_decrypt_64bit(secure_area_disable);
     key1_init_keycode(nds_cart_state.game_code, 2, 8, false);
 
-    // send key1 init command
     nds_cart_cmd_enable_key1_nds();
 
-    // encrypt subsequent commands with key1 algo
     nds_cart_state.state = NDS_CART_KEY1;
 
-    // key1 state has key2 encrypted results, so init this as well
     nds_cart_cmd_enable_key2();
 
-    // check key2 stream
-    //    uint8_t key2_stream_data[4];
-    //    nds_cart_cmd_invalid(key2_stream_data, sizeof(key2_stream_data));
-    //    uart_print_bytes(key2_stream_data, sizeof(key2_stream_data));
-
-    // check chip_id
     struct nds_chip_id chip_id;
     nds_cart_cmd_chip_id_key1(&chip_id);
 
@@ -268,15 +251,10 @@ static void nds_cart_begin_key1(void)
         DEBUG_PRINT("chip_id with key1 cmd doesn't match initial chip_id:\r\n");
         print_chip_id(&chip_id);
     }
-    else
-    {
-        //        DEBUG_PRINT("key1 chip_id is correct!\r\n");
-    }
 }
 
 static void nds_cart_begin_key2(void)
 {
-    // init xor cipher for main data transfer
     myassert(nds_cart_state.state == NDS_CART_KEY1,
              "cart must be in key1 mode before beginning key2\r\n", NULL);
 
@@ -284,7 +262,6 @@ static void nds_cart_begin_key2(void)
 
     nds_cart_state.state = NDS_CART_KEY2;
 
-    // check chip_id
     struct nds_chip_id chip_id;
     nds_cart_cmd_chip_id_key2(&chip_id);
 
@@ -293,17 +270,11 @@ static void nds_cart_begin_key2(void)
         DEBUG_PRINT("chip_id with key2 cmd doesn't match initial chip_id:\r\n");
         print_chip_id(&chip_id);
     }
-    else
-    {
-        //        DEBUG_PRINT("key1 chip_id is correct!\r\n");
-    }
 }
 
 void nds_cart_init(void)
 {
-    // set port C[0..7] to High-Z
     data_dir_input();
-    // set port C[8..11] to Output
     clk_high();
     romcs_high();
     reset_high();
@@ -359,7 +330,6 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
     bool key2_result;
     size_t gap1;
     size_t gap2;
-    //    const char *cmd_key = "RAW";
     uint64_t cmd;
 
     if (nds_cart_state.state == NDS_CART_KEY1)
@@ -371,7 +341,6 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
 
         cmd = key1_encrypt_cmd(org_cmd);
         key2_result = true;
-        //        cmd_key = "KEY1";
     }
     else
     {
@@ -383,7 +352,6 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
         if (nds_cart_state.state == NDS_CART_KEY2)
         {
             cmd = key2_encrypt_cmd(org_cmd);
-            //            cmd_key = "KEY2";
             key2_result = true;
         }
         else
@@ -393,25 +361,12 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
         }
     }
 
-    //    DEBUG_PRINTF("org_cmd: [%016llx] enc_cmd=[%016llx] clk=%s gap_clk=%d gap1=%u gap2=%u
-    //    cmd_crypt=%s reply_crypt=%s\r\n",
-    //            org_cmd,
-    //            cmd,
-    //            clk_rate == NDS_CART_CLK_6P7_MHZ ? "6.7 Mhz" : "4.2 MHz",
-    //            gap_clk,
-    //            gap1,
-    //            gap2,
-    //            cmd_key,
-    //            key2_result ? "KEY2" : "RAW"
-    //            );
-
     const uint8_t cmd_data[8] = {
             (uint8_t) (cmd >> 56), (uint8_t) (cmd >> 48), (uint8_t) (cmd >> 40),
             (uint8_t) (cmd >> 32), (uint8_t) (cmd >> 24), (uint8_t) (cmd >> 16),
             (uint8_t) (cmd >> 8),  (uint8_t) (cmd >> 0),
     };
 
-    /* 1. output command */
     if (clk_rate == NDS_CART_CLK_6P7_MHZ)
     {
         for (size_t i = 0; i < 8; i++)
@@ -429,7 +384,6 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
 
     data_dir_input();
 
-    /* 2. wait gap 1 (which includes locally computed cycles of gap2) */
     if (gap_clk)
     {
         if (clk_rate == NDS_CART_CLK_6P7_MHZ)
@@ -454,14 +408,12 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
     if (len == 0)
         goto cmdend;
 
-    /* 3. read result data in chunks of NDS_CHUNK_SIZE */
     while (true)
     {
         size_t block_size = len;
         if (block_size > NDS_CHUNK_SIZE)
             block_size = NDS_CHUNK_SIZE;
 
-        /* 3.1. read data */
         if (clk_rate == NDS_CART_CLK_6P7_MHZ)
         {
             for (size_t i = 0; i < block_size; i++)
@@ -482,7 +434,6 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
         if (len == 0)
             break;
 
-        /* 3.2. wait gap 2 */
         if (gap_clk)
         {
             if (clk_rate == NDS_CART_CLK_6P7_MHZ)
@@ -520,13 +471,10 @@ static void nds_cart_cmd_dummy(void)
 
 static void nds_cart_rom_read_page(uint8_t *read_buffer, size_t page_addr)
 {
-    //    DEBUG_PRINTF("read_page=%x\r\n", page_addr);
-
     page_addr &= ~0xFFFu;
 
     if (page_addr == 0)
     {
-        // read header
         nds_cart_change_state(NDS_CART_RAW);
         if (nds_cart_state.dsi)
         {
@@ -541,12 +489,10 @@ static void nds_cart_rom_read_page(uint8_t *read_buffer, size_t page_addr)
     }
     else if (page_addr < 0x4000)
     {
-        // read unused area
         memset(read_buffer, 0, NDS_PAGE_SIZE);
     }
     else if (page_addr < 0x8000)
     {
-        // read secure area
         if (nds_cart_state.has_secure_area)
         {
             nds_cart_change_state(NDS_CART_KEY1);
@@ -559,12 +505,9 @@ static void nds_cart_rom_read_page(uint8_t *read_buffer, size_t page_addr)
     }
     else
     {
-        // read data
         nds_cart_change_state(NDS_CART_KEY2);
         nds_cart_read_main_data_page(read_buffer, page_addr >> 12);
     }
-
-    // TODO read DSi secure area
 }
 
 void nds_cart_rom_read(size_t byte_addr, uint8_t *data, size_t len)
@@ -605,8 +548,6 @@ bool nds_cart_rom_init(void)
 
     nds_cart_state.chip_id = chip_id;
     nds_cart_state.protocol_rev = chip_id.cart_protocol;
-    //    DEBUG_PRINTF("protocol_rev: %d\r\n", nds_cart_state.protocol_rev);
-    //    print_chip_id(&chip_id);
     nds_cart_state.normal_gap_clk = header.gamecart_bus_timing_normal.clk_gap;
     nds_cart_state.normal_clk_rate = header.gamecart_bus_timing_normal.clk_rate;
     nds_cart_state.normal_gap1 = header.gamecart_bus_timing_normal.gap1_len;
@@ -616,7 +557,6 @@ bool nds_cart_rom_init(void)
     nds_cart_state.key1_gap1 = header.gamecart_bus_timing_key1.gap1_len;
     nds_cart_state.key1_gap2 = header.gamecart_bus_timing_key1.gap2_len;
     nds_cart_state.key1_delay_ms = (uint16_t) ceil_div(header.secure_area_delay * 1000, 131072);
-    //    DEBUG_PRINTF("secure_area_delay ms: %u\r\n", nds_cart_state.key1_delay_ms);
 
     if (header.unit_code == 0x0)
     {
@@ -649,7 +589,6 @@ bool nds_cart_rom_init(void)
     nds_cart_state.secure_area_disable[1] = header.secure_area_disable_uint[1];
     nds_cart_state.seed_byte = header.encryption_seed_select;
 
-    // TODO randomize these initial values for hardened testing
     nds_cart_state.kkkkk = 0x98bc7;
     nds_cart_state.iii = 0x20C;
     nds_cart_state.jjj = 0xB5B;
@@ -657,17 +596,9 @@ bool nds_cart_rom_init(void)
     nds_cart_state.mmm = 0x733;
     nds_cart_state.nnn = 0xc55;
     key2_init(true);
-    //    uint8_t d[8];
-    //    memset(d, 0, sizeof(d));
-    //    key2_xcrypt(d, sizeof(d));
-    //    DEBUG_PRINT("key2_hw_init_stream:\r\n");
-    //    uart_print_bytes(d, sizeof(d));
+
     return true;
 }
-
-/*
- * RAW (unencrypted) commands
- */
 
 static void nds_cart_read_header(uint8_t *data, bool extended)
 {
@@ -682,7 +613,6 @@ static void nds_cart_read_header(uint8_t *data, bool extended)
             for (size_t chunk = 0; chunk < NDS_EXT_HEADER_SIZE / NDS_CHUNK_SIZE; chunk++)
             {
                 size_t chunk_addr = chunk * NDS_CHUNK_SIZE;
-                /* 0x00aaaaaaaa000000 */
                 cmd |= (uint64_t) chunk_addr << 24;
                 nds_cart_exec_command(cmd, &data[chunk_addr], NDS_CHUNK_SIZE);
             }
@@ -727,10 +657,6 @@ static void nds_cart_cmd_enable_key1_nds(void)
     nds_cart_exec_command(cmd, reply, 0);
 }
 
-/*
- * KEY1 (encrypted) commands
- */
-
 static void nds_cart_cmd_enable_key2(void)
 {
     assert(nds_cart_state.state == NDS_CART_KEY1);
@@ -743,10 +669,6 @@ static void nds_cart_cmd_enable_key2(void)
     cmd |= (uint64_t) (nds_cart_state.kkkkk & 0xFFFFF) << 0;
 
     assert(cmd == key1_decrypt_cmd(key1_encrypt_cmd(cmd)));
-
-    //    uint64_t cmd_test_crypt = 0xff33aa411b5cadec;
-    //    DEBUG_PRINTF("traced [%016llx] decrypts to [%016llx]\r\n", cmd_test_crypt,
-    //    key1_decrypt_cmd(cmd_test_crypt));
 
     if (nds_cart_state.protocol_rev == NDS_PROTO_REV_MROM)
     {
@@ -762,7 +684,6 @@ static void nds_cart_cmd_enable_key2(void)
         nds_cart_exec_command(cmd, reply, 0);
     }
 
-    //    DEBUG_PRINTF("key2 stream beginning with: %02x\r\n", reply[0]);
     nds_cart_state.kkkkk += 1;
 }
 
@@ -790,21 +711,6 @@ static void nds_cart_cmd_chip_id_key1(struct nds_chip_id *chip_id)
 
     nds_cart_state.kkkkk += 1;
 }
-
-// static void nds_cart_cmd_invalid(uint8_t *data, size_t len)
-//{
-//     assert(nds_cart_state.state == NDS_CART_KEY1);
-//
-//     const uint64_t cmd = 0x5000000000000000;
-//     if (nds_cart_state.protocol_rev == NDS_PROTO_REV_MROM) {
-//         HAL_Delay(nds_cart_state.key1_delay_ms);
-//         nds_cart_exec_command(cmd, data, len);
-//     } else {
-//         nds_cart_exec_command(cmd, data, 0);
-//         HAL_Delay(nds_cart_state.key1_delay_ms);
-//         nds_cart_exec_command(cmd, data, len);
-//     }
-// }
 
 static void nds_cart_cmd_get_secure_area(uint8_t *data, size_t page)
 {
@@ -862,10 +768,6 @@ static void nds_cart_cmd_enable_data_mode(void)
     nds_cart_state.kkkkk += 1;
 }
 
-/*
- * KEY2 (encrypted) commands
- */
-
 static void nds_cart_cmd_chip_id_key2(struct nds_chip_id *chip_id)
 {
     assert(nds_cart_state.state == NDS_CART_KEY2);
@@ -885,10 +787,6 @@ static void nds_cart_read_main_data_page(uint8_t *data, size_t page)
         data += NDS_CHUNK_SIZE;
     }
 }
-
-/*
- * high level command functions
- */
 
 static void nds_cart_read_secure_area_page(uint8_t *data, size_t page)
 {
@@ -931,9 +829,6 @@ static void nds_cart_read_secure_area_page(uint8_t *data, size_t page)
     memcpy(data, secure_area_page._u8, sizeof(secure_area_page._u8));
 }
 
-/*
- * KEY1 encryption stuff
- */
 s_blowfish_t blowfish_buf = {0};
 
 static void key1_encrypt_64bit(uint32_t *data)
@@ -1037,15 +932,10 @@ static void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, 
 {
     uint32_t keycode[3];
 
-    //    DEBUG_PRINTF("key1_init_keycode: %c%c%c%c\r\n", idcode >> 0, idcode >> 8, idcode >> 16,
-    //    idcode >> 24);
-
     if (dsi)
         memcpy(&blowfish_buf, dsi_cart_key, sizeof(blowfish_buf));
     else
         memcpy(&blowfish_buf, nds_cart_key, sizeof(blowfish_buf));
-
-    //    PRINT_KEY_BUFFER("unmodified", &blowfish_buf); // 'should output 99 D5 20 5F ...
 
     keycode[0] = idcode;
     keycode[1] = idcode / 2;
@@ -1053,24 +943,14 @@ static void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, 
 
     if (level >= 1)
         key1_apply_keycode(keycode, modulo);
-    //    if (level >= 1)
-    //        PRINT_KEY_BUFFER("level 1", &blowfish_buf); // 'AMCP' level 1 --> should output 2B 8E
-    //        67 BB ...
     if (level >= 2)
         key1_apply_keycode(keycode, modulo);
-    //    if (level >= 2)
-    //        PRINT_KEY_BUFFER("level 2", &blowfish_buf); // 'AMCP' level 2 --> should output CD 9E
-    //        F6 49 ...
 
     keycode[1] *= 2;
     keycode[2] /= 2;
 
     if (level >= 3)
         key1_apply_keycode(keycode, modulo);
-    //    if (level >= 3)
-    //        PRINT_KEY_BUFFER("level 3", &blowfish_buf); // 'AMCP' level 3 --> should output AF A9
-    //        F1 B7 ...
-    //    DEBUG_PRINT("end\r\n");
 }
 
 static void key2_init(bool hw_reset)
@@ -1093,18 +973,8 @@ static void key2_init(bool hw_reset)
     const uint64_t seed0 = (mmm | nnn) + 0x6000 + seedbytes[nds_cart_state.seed_byte % 8];
     const uint64_t seed1 = 0x5C879B9B05;
 
-    // values have to be bit reversed at a length of 39 bits
     nds_cart_state.key2_x = bitrev_64(seed0) >> (64 - 39);
     nds_cart_state.key2_y = bitrev_64(seed1) >> (64 - 39);
-
-    //    DEBUG_PRINTF("initializing key2 mmm=%03llx nnn=%03llx seedbyte=%02x\r\n",
-    //        mmm, nnn, seedbytes[nds_cart_state.seed_byte % 8]
-    //    );
-    //    DEBUG_PRINTF("    => seed0=%010llx seed1=%010llx\r\n", seed0, seed1);
-    //    DEBUG_PRINTF("    => rev(seed0)=%010llx rev(seed1)=%010llx\r\n", bitrev_64(seed0),
-    //    bitrev_64(seed1)); DEBUG_PRINTF("    => final(seed0)=%010llx final(seed1)=%010llx\r\n",
-    //    bitrev_64(seed0) >> 25, bitrev_64(seed1) >> 25); DEBUG_PRINTF("    => x=%010llx
-    //    y=%010llx\r\n", nds_cart_state.key2_x, nds_cart_state.key2_y);
 }
 
 static void key2_xcrypt(uint8_t *data, size_t len)
@@ -1140,7 +1010,6 @@ static void key2_xcrypt(uint8_t *data, size_t len)
 
 static uint64_t key2_encrypt_cmd(uint64_t cmd)
 {
-    // convert to big endian byte array
     uint8_t cmd_data[8];
 #pragma GCC unroll 8
     for (size_t i = 0; i < 8; i++)
@@ -1151,7 +1020,6 @@ static uint64_t key2_encrypt_cmd(uint64_t cmd)
 
     key2_xcrypt(cmd_data, sizeof(cmd_data));
 
-    // convert to number again
     cmd = 0;
 #pragma GCC unroll 8
     for (size_t i = 0; i < 8; i++)
