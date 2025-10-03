@@ -8,12 +8,33 @@ extern "C" {
 #include <stdint.h>
 #include "stm32f1xx_hal.h"
 
-#define CHECK_STATUS(ret)                                                                          \
-    if (ret != HAL_OK)                                                                             \
+#define GLOBAL_STATUS e_error_state
+
+#define CHECK_GLOBAL_STATUS(ret)                                                                   \
+    if (ret != ERROR_STATE_OK)                                                                     \
     {                                                                                              \
         status = ret;                                                                              \
         goto EXIT;                                                                                 \
     }
+
+typedef enum e_error_state
+{
+    ERROR_STATE_NONE = 0,
+    ERROR_STATE_OK,
+    ERROR_STATE_OSC_INIT_FAIL,
+    ERROR_STATE_CLK_INIT_FAIL,
+    ERROR_STATE_PERIPH_CLK_FAIL,
+    ERROR_STATE_BUFFER_OVERFLOW,
+    ERROR_STATE_SIZE_INVALID,
+    ERROR_STATE_POS_MISMATCH,
+    ERROR_STATE_CDC_TRANSMIT_FAIL,
+    ERROR_STATE_INVALID_PARAMETER,
+    ERROR_STATE_ROM_NOT_INITIALIZED,
+    ERROR_STATE_TIMEOUT,
+    ERROR_STATE_UART_INIT,
+    ERROR_STATE_UART_TRANSMIT_FAIL,
+    ERROR_STATE_GPIO_INIT,
+} e_error_state;
 
 __attribute__((always_inline)) static inline void NOP(void) { __asm__("\tnop"); }
 
@@ -33,15 +54,15 @@ typedef struct
     uint32_t S[4][256];
 } s_blowfish_t;
 
-void usb_send_data(const void *data, uint16_t len);
-void usb_print_bytes(const void *data, uint16_t len);
-void usb_printf(const char *msg, ...);
+GLOBAL_STATUS usb_send_data(const void *data, uint16_t len);
+GLOBAL_STATUS usb_print_bytes(const void *data, uint16_t len);
+GLOBAL_STATUS usb_printf(const char *msg, ...);
 
-void uart_send_data(const void *data, uint16_t len);
-void uart_print_bytes(const void *data, uint16_t len);
-void uart_printf(const char *msg, ...);
+GLOBAL_STATUS uart_send_data(const void *data, uint16_t len);
+GLOBAL_STATUS uart_print_bytes(const void *data, uint16_t len);
+GLOBAL_STATUS uart_printf(const char *msg, ...);
 
-void print_keybuf(const char *pMsg, s_blowfish_t *pKeyBuf);
+GLOBAL_STATUS print_keybuf(const char *pMsg, s_blowfish_t *pKeyBuf);
 
 const char *itox8(uint8_t x);
 const char *itox32(uint32_t x);

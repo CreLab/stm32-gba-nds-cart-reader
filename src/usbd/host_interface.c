@@ -32,26 +32,36 @@ struct
     size_t rom_byte_addr;
 } nds;
 
-static void hostif_handle_request(struct host_request *const rq, struct device_reply *const rp);
-static void hostif_send_reply(void);
+static GLOBAL_STATUS hostif_handle_request(struct host_request *const rq,
+                                           struct device_reply *const rp);
+static GLOBAL_STATUS hostif_send_reply(void);
 static void hostif_reply_err(struct device_reply *const rp, const char *msg, ...);
 
-void hostif_run(void)
+GLOBAL_STATUS hostif_run(void)
 {
+    GLOBAL_STATUS status = ERROR_STATE_NONE;
+
     if (request_a_available)
     {
-        hostif_handle_request(request_a, reply);
+        CHECK_GLOBAL_STATUS(hostif_handle_request(request_a, reply));
         request_a_available = false;
     }
     else if (request_b_available)
     {
-        hostif_handle_request(request_b, reply);
+        CHECK_GLOBAL_STATUS(hostif_handle_request(request_b, reply));
         request_b_available = false;
     }
+
+    status = ERROR_STATE_OK;
+EXIT:
+    return status;
 }
 
-static void hostif_handle_request(struct host_request *const rq, struct device_reply *const rp)
+static GLOBAL_STATUS hostif_handle_request(struct host_request *const rq,
+                                           struct device_reply *const rp)
 {
+    GLOBAL_STATUS status = ERROR_STATE_NONE;
+
     rp->magic = DEV_REPL_MAGIC;
     rp->id = rq->id;
     switch (rq->type)
@@ -60,6 +70,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
             if (rq->len != 4)
             {
                 hostif_reply_err(rp, "ERROR: gba rom address seek: len != 4: %s", itox32(rq->len));
+                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
             }
             else
             {
@@ -74,6 +85,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
             if (rq->len != 2)
             {
                 hostif_reply_err(rp, "ERROR: gba rom read len: len != 2: %s", itox32(rq->len));
+                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
             }
             else
             {
@@ -124,6 +136,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
             if (rq->len != 2)
             {
                 hostif_reply_err(rp, "ERROR: gba sram address seek: len != 2: %s", itox32(rq->len));
+                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
             }
             else
             {
@@ -140,6 +153,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
             if (rq->len != 2)
             {
                 hostif_reply_err(rp, "ERROR: gba sram read len: len != 2: %s", itox32(rq->len));
+                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
             }
             else
             {
@@ -175,6 +189,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
             else
             {
                 hostif_reply_err(rp, "ERROR: gba flash erase timed out");
+                CHECK_GLOBAL_STATUS(ERROR_STATE_TIMEOUT);
             }
             break;
         case HOST_REQ_FLASH_WRITE:
@@ -191,6 +206,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
                 else
                 {
                     hostif_reply_err(rp, "ERROR: gba flash write timed out");
+                    CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
                 }
             }
             break;
@@ -198,6 +214,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
             if (rq->len != 1)
             {
                 hostif_reply_err(rp, "ERROR: gba flash bank: len != 2: %s", itox32(rq->len));
+                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
             }
             else
             {
@@ -212,6 +229,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
             {
                 hostif_reply_err(rp, "ERROR: gba eeprom address seek: len != 2: %s",
                                  itox32(rq->len));
+                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
             }
             else
             {
@@ -243,6 +261,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
             if (rq->len != 8)
             {
                 hostif_reply_err(rp, "ERROR: gba eeprom512 write: len != 8: %s", itox32(rq->len));
+                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
             }
             else
             {
@@ -254,6 +273,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
                 else
                 {
                     hostif_reply_err(rp, "ERROR: gba eeprom512 write timed out");
+                    CHECK_GLOBAL_STATUS(ERROR_STATE_TIMEOUT);
                 }
             }
             break;
@@ -261,6 +281,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
             if (rq->len != 8)
             {
                 hostif_reply_err(rp, "ERROR: gba eeprom8k write: len != 8: %s", itox32(rq->len));
+                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
             }
             else
             {
@@ -272,6 +293,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
                 else
                 {
                     hostif_reply_err(rp, "ERROR: gba eeprom8k write timed out");
+                    CHECK_GLOBAL_STATUS(ERROR_STATE_TIMEOUT);
                 }
             }
             break;
@@ -283,6 +305,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
             if (rq->len != 4)
             {
                 hostif_reply_err(rp, "ERROR: nds rom seek len != 4: %s", itox32(rq->len));
+                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
             }
             else
             {
@@ -296,6 +319,7 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
             if (rq->len != 2)
             {
                 hostif_reply_err(rp, "ERROR: nds rom read len != 2: %s", itox32(rq->len));
+                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
             }
             else
             {
@@ -323,17 +347,26 @@ static void hostif_handle_request(struct host_request *const rq, struct device_r
             {
                 hostif_reply_err(rp,
                                  "ERROR: nds rom could not be initialized, see UART for details");
+                CHECK_GLOBAL_STATUS(ERROR_STATE_ROM_NOT_INITIALIZED);
             }
             break;
         default:
             hostif_reply_err(rp, "ERROR: invalid request ID: %s", itox32(rq->type));
+            CHECK_GLOBAL_STATUS(ERROR_STATE_INVALID_PARAMETER);
     }
-    hostif_send_reply();
+
+    status = ERROR_STATE_OK;
+EXIT:
+    if (hostif_send_reply() != ERROR_STATE_OK)
+    {
+        status = ERROR_STATE_CDC_TRANSMIT_FAIL;
+    }
+    return status;
 }
 
-static void hostif_send_reply(void)
+static GLOBAL_STATUS hostif_send_reply(void)
 {
-    usb_send_data(reply, (uint16_t) (sizeof(struct device_reply) + reply->len));
+    return usb_send_data(reply, (uint16_t) (sizeof(struct device_reply) + reply->len));
 }
 
 static void hostif_reply_err(struct device_reply *const rp, const char *msg, ...)
@@ -345,8 +378,10 @@ static void hostif_reply_err(struct device_reply *const rp, const char *msg, ...
     va_end(args);
 }
 
-void hostif_data_receive(const uint8_t *data, uint16_t size)
+GLOBAL_STATUS hostif_data_receive(const uint8_t *data, uint16_t size)
 {
+    GLOBAL_STATUS status = ERROR_STATE_NONE;
+
     static uint8_t request_receive_buffer[REQ_BUF_SIZE];
     static struct host_request *const request_receive =
             (struct host_request *) request_receive_buffer;
@@ -354,7 +389,9 @@ void hostif_data_receive(const uint8_t *data, uint16_t size)
     static bool buffer_overflow = false;
 
     if (size == 0)
-        return;
+    {
+        CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
+    }
 
     if (buffer_overflow)
     {
@@ -365,17 +402,21 @@ void hostif_data_receive(const uint8_t *data, uint16_t size)
     if (request_receive_pos >= REQ_BUF_SIZE)
     {
         buffer_overflow = true;
-        return;
+        CHECK_GLOBAL_STATUS(ERROR_STATE_BUFFER_OVERFLOW);
     }
 
     if ((size_t) size + request_receive_pos > REQ_BUF_SIZE)
+    {
         size = (uint16_t) (REQ_BUF_SIZE - request_receive_pos);
+    }
 
     memcpy(request_receive_buffer + request_receive_pos, data, size);
     request_receive_pos = (uint16_t) (request_receive_pos + size);
 
     if (request_receive_pos < offsetof(struct device_reply, magic) + sizeof(uint16_t))
-        return;
+    {
+        CHECK_GLOBAL_STATUS(ERROR_STATE_POS_MISMATCH);
+    }
 
     while (request_receive->magic != HOST_REQ_MAGIC)
     {
@@ -383,15 +424,21 @@ void hostif_data_receive(const uint8_t *data, uint16_t size)
                 (size_t) (request_receive_pos - 1));
         request_receive_pos--;
         if (request_receive_pos <= 1)
-            return;
+        {
+            CHECK_GLOBAL_STATUS(ERROR_STATE_OK);
+        }
     }
 
     if (request_receive_pos < offsetof(struct device_reply, len) + sizeof(uint16_t))
-        return;
+    {
+        CHECK_GLOBAL_STATUS(ERROR_STATE_POS_MISMATCH);
+    }
 
     uint16_t packet_len = request_receive->len;
     if (request_receive_pos < packet_len + sizeof(struct host_request))
-        return;
+    {
+        CHECK_GLOBAL_STATUS(ERROR_STATE_POS_MISMATCH);
+    }
 
     if (request_a_available == false)
     {
@@ -401,8 +448,10 @@ void hostif_data_receive(const uint8_t *data, uint16_t size)
                 request_receive_pos - bytes_to_copy);
         request_receive_pos = (uint16_t) (request_receive_pos - bytes_to_copy);
         request_a_available = true;
-        return;
+
+        CHECK_GLOBAL_STATUS(ERROR_STATE_OK);
     }
+
     if (request_b_available == false)
     {
         size_t bytes_to_copy = sizeof(struct host_request) + packet_len;
@@ -411,6 +460,11 @@ void hostif_data_receive(const uint8_t *data, uint16_t size)
                 request_receive_pos - bytes_to_copy);
         request_receive_pos = (uint16_t) (request_receive_pos - bytes_to_copy);
         request_b_available = true;
-        return;
+
+        CHECK_GLOBAL_STATUS(ERROR_STATE_OK);
     }
+
+    status = ERROR_STATE_OK;
+EXIT:
+    return status;
 }
