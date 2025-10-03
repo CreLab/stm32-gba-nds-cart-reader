@@ -8,6 +8,7 @@ extern "C" {
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <util.h>
 
 #define XFER_MAX_PAYLOAD_SIZE 4096
 
@@ -99,8 +100,8 @@ struct device_reply
     uint8_t data[];
 };
 
-void hostif_run(void);
-void hostif_data_receive(const uint8_t *data, uint16_t size);
+GLOBAL_STATUS hostif_run(void);
+GLOBAL_STATUS hostif_data_receive(const uint8_t *data, uint16_t size);
 
 #ifdef __cplusplus
 }

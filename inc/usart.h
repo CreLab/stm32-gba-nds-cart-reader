@@ -9,7 +9,7 @@ extern "C" {
 
 extern UART_HandleTypeDef huart1;
 
-HAL_StatusTypeDef MX_USART1_UART_Init(void);
+GLOBAL_STATUS MX_USART1_UART_Init(void);
 
 #ifdef __cplusplus
 }

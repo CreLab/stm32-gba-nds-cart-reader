@@ -191,13 +191,10 @@ static struct
     uint16_t normal_gap1;
     uint16_t key1_gap1;
     uint16_t key1_delay_ms;
-    // header data
     uint32_t game_code;
     uint32_t secure_area_disable[2];
     uint8_t seed_byte;
-    // other data
     struct nds_chip_id chip_id;
-    // encryption stuff
     uint32_t kkkkk;
     uint16_t iii, jjj, llll;
     uint16_t mmm, nnn;

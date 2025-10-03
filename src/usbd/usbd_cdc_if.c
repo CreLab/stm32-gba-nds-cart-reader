@@ -1,5 +1,24 @@
+/**
+ ******************************************************************************
+ * @file           : usbd_cdc_if.c
+ * @version        : v2.0_Cube
+ * @brief          : Usb device for Virtual Com Port.
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 #include "../../inc/usbd/usbd_cdc_if.h"
 #include <stdbool.h>
+#include <util.h>
+
 #include "host_interface.h"
 
 uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
@@ -19,10 +38,10 @@ static int8_t CDC_Init_FS(void)
 {
     USBD_CDC_SetTxBuffer(&hUsbDeviceFS, UserTxBufferFS, 0);
     USBD_CDC_SetRxBuffer(&hUsbDeviceFS, UserRxBufferFS);
-    return (USBD_OK);
+    return USBD_OK;
 }
 
-static int8_t CDC_DeInit_FS(void) { return (USBD_OK); }
+static int8_t CDC_DeInit_FS(void) { return USBD_OK; }
 
 /*******************************************************************************/
 /* Line Coding Structure                                                       */
@@ -49,56 +68,35 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length)
     switch (cmd)
     {
         case CDC_SEND_ENCAPSULATED_COMMAND:
-
-            break;
-
         case CDC_GET_ENCAPSULATED_RESPONSE:
-
-            break;
-
         case CDC_SET_COMM_FEATURE:
-
-            break;
-
         case CDC_GET_COMM_FEATURE:
-
-            break;
-
         case CDC_CLEAR_COMM_FEATURE:
-
-            break;
-
-
         case CDC_SET_LINE_CODING:
-
-            break;
-
         case CDC_GET_LINE_CODING:
-
-            break;
-
         case CDC_SET_CONTROL_LINE_STATE:
-
-            break;
-
         case CDC_SEND_BREAK:
-
-            break;
-
         default:
             break;
     }
 
-    return (USBD_OK);
+    return USBD_OK;
 }
 
 static int8_t CDC_Receive_FS(uint8_t *Buf, uint32_t *Len)
 {
+    USBD_StatusTypeDef status = USBD_FAIL;
+
     uint32_t len = *Len;
-    hostif_data_receive(Buf, (uint16_t) len);
-    USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
-    USBD_CDC_ReceivePacket(&hUsbDeviceFS);
-    return (USBD_OK);
+    if (hostif_data_receive(Buf, (uint16_t) len) == ERROR_STATE_OK)
+    {
+        USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
+        USBD_CDC_ReceivePacket(&hUsbDeviceFS);
+
+        status = USBD_OK;
+    }
+
+    return status;
 }
 
 uint8_t CDC_Transmit_FS(uint8_t *Buf, uint16_t Len)
