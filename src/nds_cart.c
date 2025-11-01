@@ -40,7 +40,7 @@ __attribute__((always_inline)) static inline void wait_cycles(size_t cycles)
     }
 }
 
-static void print_chip_id(const struct nds_chip_id *id)
+static void print_chip_id(const s_nds_chip_id *id)
 {
     uint8_t bid[4];
     memcpy(bid, id, 4);
@@ -129,32 +129,6 @@ __attribute__((always_inline)) static inline void data_out_cycle_67(uint8_t d)
     data_out_cycle(d, 5);
 }
 
-static void nds_cart_exec_command(uint64_t cmd, uint8_t *data, size_t len);
-
-static void nds_cart_cmd_dummy(void);
-static void nds_cart_cmd_main_data_read(uint8_t *data, uint32_t addr);
-static void nds_cart_cmd_enable_key1_nds(void);
-static void nds_cart_cmd_enable_key2(void);
-static void nds_cart_cmd_chip_id_key1(struct nds_chip_id *chip_id);
-// static void nds_cart_cmd_invalid(uint8_t *data, size_t len);
-static void nds_cart_cmd_get_secure_area(uint8_t *data, size_t page);
-static void nds_cart_cmd_chip_id_key2(struct nds_chip_id *chip_id);
-static void nds_cart_cmd_enable_data_mode(void);
-
-static void nds_cart_read_header(uint8_t *data, bool extended);
-static void nds_cart_read_main_data_page(uint8_t *data, size_t page);
-static void nds_cart_read_secure_area_page(uint8_t *data, size_t page);
-
-static void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, bool dsi);
-static void key1_encrypt_64bit(uint32_t *data);
-static void key1_decrypt_64bit(uint32_t *data);
-static uint64_t key1_encrypt_cmd(uint64_t cmd);
-static uint64_t key1_decrypt_cmd(uint64_t cmd);
-
-static void key2_init(bool hw_reset);
-static void key2_xcrypt(uint8_t *data, size_t len);
-static uint64_t key2_encrypt_cmd(uint64_t cmd);
-
 enum nds_cart_state_t
 {
     NDS_CART_UNINITIALIZED,
@@ -175,52 +149,30 @@ enum nds_cart_clk_rate
     NDS_CART_CLK_4P2_MHZ,
 };
 
-static struct
-{
-    uint8_t state;
-    bool normal_gap_clk : 1;
-    bool key1_gap_clk : 1;
-    bool normal_clk_rate : 1;
-    bool key1_clk_rate : 1;
-    bool nds : 1;
-    bool dsi : 1;
-    bool has_secure_area : 1;
-    bool protocol_rev : 1;
-    uint8_t normal_gap2;
-    uint8_t key1_gap2;
-    uint16_t normal_gap1;
-    uint16_t key1_gap1;
-    uint16_t key1_delay_ms;
-    uint32_t game_code;
-    uint32_t secure_area_disable[2];
-    uint8_t seed_byte;
-    struct nds_chip_id chip_id;
-    uint32_t kkkkk;
-    uint16_t iii, jjj, llll;
-    uint16_t mmm, nnn;
-    uint64_t key2_x;
-    uint64_t key2_y;
-} nds_cart_state;
+s_nds_cart_state nds_cart_state;
 
-static void nds_cart_reset(void)
-{
-    reset_low();
-    HAL_Delay(10);
-    reset_high();
+static s_blowfish_t blowfish_buf = {0};
 
-    nds_cart_state.state = NDS_CART_UNINITIALIZED;
-    nds_cart_state.normal_gap_clk = false;
-    nds_cart_state.key1_gap_clk = false;
-    nds_cart_state.normal_clk_rate = false;
-    nds_cart_state.key1_clk_rate = false;
-    nds_cart_state.nds = true;
-    nds_cart_state.dsi = false;
-    nds_cart_state.has_secure_area = true;
-    nds_cart_state.normal_gap1 = 0x8F8;
-    nds_cart_state.key1_gap1 = 0x8F8;
-    nds_cart_state.normal_gap2 = 0x18;
-    nds_cart_state.key1_gap2 = 0x18;
-}
+static void nds_cart_exec_command(uint64_t cmd, uint8_t *data, size_t len);
+static void nds_cart_cmd_dummy(void);
+static void nds_cart_cmd_main_data_read(uint8_t *data, uint32_t addr);
+static void nds_cart_cmd_enable_key1_nds(void);
+static void nds_cart_cmd_enable_key2(void);
+static void nds_cart_cmd_chip_id_key1(s_nds_chip_id *chip_id);
+// static void nds_cart_cmd_invalid(uint8_t *data, size_t len);
+static void nds_cart_cmd_get_secure_area(uint8_t *data, size_t page);
+static void nds_cart_cmd_chip_id_key2(s_nds_chip_id *chip_id);
+static void nds_cart_cmd_enable_data_mode(void);
+
+static void nds_cart_read_header(uint8_t *data, bool extended);
+static void nds_cart_read_main_data_page(uint8_t *data, size_t page);
+static void nds_cart_read_secure_area_page(uint8_t *data, size_t page);
+
+static void nds_cart_reset(void);
+
+static void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, bool dsi);
+static void key1_encrypt_64bit(uint32_t *data);
+static void key1_decrypt_64bit(uint32_t *data);
 
 static void nds_cart_begin_key1(void)
 {
@@ -240,7 +192,7 @@ static void nds_cart_begin_key1(void)
 
     nds_cart_cmd_enable_key2();
 
-    struct nds_chip_id chip_id;
+    s_nds_chip_id chip_id;
     nds_cart_cmd_chip_id_key1(&chip_id);
 
     if (memcmp(&chip_id, &nds_cart_state.chip_id, sizeof(chip_id)))
@@ -259,7 +211,7 @@ static void nds_cart_begin_key2(void)
 
     nds_cart_state.state = NDS_CART_KEY2;
 
-    struct nds_chip_id chip_id;
+    s_nds_chip_id chip_id;
     nds_cart_cmd_chip_id_key2(&chip_id);
 
     if (memcmp(&chip_id, &nds_cart_state.chip_id, sizeof(chip_id)))
@@ -348,7 +300,7 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
 
         if (nds_cart_state.state == NDS_CART_KEY2)
         {
-            cmd = key2_encrypt_cmd(org_cmd);
+            cmd = key2_encrypt_cmd(&nds_cart_state, org_cmd);
             key2_result = true;
         }
         else
@@ -395,7 +347,7 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
         }
 
         if (key2_result)
-            key2_xcrypt(NULL, gap1);
+            key2_xcrypt(&nds_cart_state, NULL, gap1);
     }
     else
     {
@@ -423,7 +375,7 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
         }
 
         if (key2_result)
-            key2_xcrypt(data, block_size);
+            key2_xcrypt(&nds_cart_state, data, block_size);
 
         data += block_size;
         len -= block_size;
@@ -445,7 +397,7 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
             }
 
             if (key2_result)
-                key2_xcrypt(NULL, gap2);
+                key2_xcrypt(&nds_cart_state, NULL, gap2);
         }
         else
         {
@@ -534,8 +486,8 @@ bool nds_cart_rom_init(void)
 
     HAL_Delay(10);
 
-    struct nds_chip_id chip_id;
-    struct nds_header header;
+    s_nds_chip_id chip_id;
+    s_nds_header header;
 
     nds_cart_state.state = NDS_CART_RAW;
 
@@ -592,7 +544,7 @@ bool nds_cart_rom_init(void)
     nds_cart_state.llll = 0xd44e;
     nds_cart_state.mmm = 0x733;
     nds_cart_state.nnn = 0xc55;
-    key2_init(true);
+    nds_cart_state.key2 = key2_init(true);
 
     return true;
 }
@@ -671,20 +623,20 @@ static void nds_cart_cmd_enable_key2(void)
     {
         HAL_Delay(nds_cart_state.key1_delay_ms);
         nds_cart_exec_command(cmd, reply, 0);
-        key2_init(false);
+        nds_cart_state.key2 = key2_init(false);
     }
     else
     {
         nds_cart_exec_command(cmd, reply, 0);
         HAL_Delay(nds_cart_state.key1_delay_ms);
-        key2_init(false);
+        nds_cart_state.key2 = key2_init(false);
         nds_cart_exec_command(cmd, reply, 0);
     }
 
     nds_cart_state.kkkkk += 1;
 }
 
-static void nds_cart_cmd_chip_id_key1(struct nds_chip_id *chip_id)
+static void nds_cart_cmd_chip_id_key1(s_nds_chip_id *chip_id)
 {
     assert(nds_cart_state.state == NDS_CART_KEY1);
 
@@ -765,7 +717,7 @@ static void nds_cart_cmd_enable_data_mode(void)
     nds_cart_state.kkkkk += 1;
 }
 
-static void nds_cart_cmd_chip_id_key2(struct nds_chip_id *chip_id)
+static void nds_cart_cmd_chip_id_key2(s_nds_chip_id *chip_id)
 {
     assert(nds_cart_state.state == NDS_CART_KEY2);
 
@@ -826,7 +778,25 @@ static void nds_cart_read_secure_area_page(uint8_t *data, size_t page)
     memcpy(data, secure_area_page._u8, sizeof(secure_area_page._u8));
 }
 
-s_blowfish_t blowfish_buf = {0};
+static void nds_cart_reset(void)
+{
+    reset_low();
+    HAL_Delay(10);
+    reset_high();
+
+    nds_cart_state.state = NDS_CART_UNINITIALIZED;
+    nds_cart_state.normal_gap_clk = false;
+    nds_cart_state.key1_gap_clk = false;
+    nds_cart_state.normal_clk_rate = false;
+    nds_cart_state.key1_clk_rate = false;
+    nds_cart_state.nds = true;
+    nds_cart_state.dsi = false;
+    nds_cart_state.has_secure_area = true;
+    nds_cart_state.normal_gap1 = 0x8F8;
+    nds_cart_state.key1_gap1 = 0x8F8;
+    nds_cart_state.normal_gap2 = 0x18;
+    nds_cart_state.key1_gap2 = 0x18;
+}
 
 static void key1_encrypt_64bit(uint32_t *data)
 {
@@ -868,7 +838,7 @@ static void key1_decrypt_64bit(uint32_t *data)
     data[1] = y ^ blowfish_buf.P[0];
 }
 
-static uint64_t key1_encrypt_cmd(uint64_t cmd)
+uint64_t key1_encrypt_cmd(uint64_t cmd)
 {
     union
     {
@@ -881,7 +851,7 @@ static uint64_t key1_encrypt_cmd(uint64_t cmd)
     return u._u64;
 }
 
-static uint64_t key1_decrypt_cmd(uint64_t cmd)
+uint64_t key1_decrypt_cmd(uint64_t cmd)
 {
     union
     {
@@ -950,34 +920,34 @@ static void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, 
         key1_apply_keycode(keycode, modulo);
 }
 
-static void key2_init(bool hw_reset)
+s_key2 key2_init(bool hw_reset)
 {
-    if (hw_reset)
+    s_key2 key = {0};
+
+    uint64_t seed0 = 0x58C56DE0E8;
+    uint64_t seed1 = 0x5C879B9B05;
+
+    if (!hw_reset)
     {
-        const uint64_t seed0 = 0x58C56DE0E8;
-        const uint64_t seed1 = 0x5C879B9B05;
+        const uint64_t mmm = (uint64_t) (nds_cart_state.mmm & 0xFFF) << 27;
+        const uint64_t nnn = (uint64_t) (nds_cart_state.nnn & 0xFFF) << 15;
+        static const uint8_t seedbytes[8] = {0xE8, 0x4D, 0x5A, 0xB1, 0x17, 0x8F, 0x99, 0xD5};
 
-        nds_cart_state.key2_x = bitrev_64(seed0) >> (64 - 39);
-        nds_cart_state.key2_y = bitrev_64(seed1) >> (64 - 39);
-
-        return;
+        seed0 = (mmm | nnn) + 0x6000 + seedbytes[nds_cart_state.seed_byte % 8];
     }
 
-    const uint64_t mmm = (uint64_t) (nds_cart_state.mmm & 0xFFF) << 27;
-    const uint64_t nnn = (uint64_t) (nds_cart_state.nnn & 0xFFF) << 15;
-    static const uint8_t seedbytes[8] = {0xE8, 0x4D, 0x5A, 0xB1, 0x17, 0x8F, 0x99, 0xD5};
+    key.x = bitrev_64(seed0) >> (64 - 39);
+    key.y = bitrev_64(seed1) >> (64 - 39);
 
-    const uint64_t seed0 = (mmm | nnn) + 0x6000 + seedbytes[nds_cart_state.seed_byte % 8];
-    const uint64_t seed1 = 0x5C879B9B05;
-
-    nds_cart_state.key2_x = bitrev_64(seed0) >> (64 - 39);
-    nds_cart_state.key2_y = bitrev_64(seed1) >> (64 - 39);
+    return key;
 }
 
-static void key2_xcrypt(uint8_t *data, size_t len)
+s_key2 key2_xcrypt(s_nds_cart_state* state, uint8_t *data, size_t len)
 {
-    uint64_t x = nds_cart_state.key2_x;
-    uint64_t y = nds_cart_state.key2_y;
+    s_key2 key = {0};
+            
+    uint64_t x = state->key2.x;
+    uint64_t y = state->key2.y;
 
     if (data)
     {
@@ -1001,13 +971,16 @@ static void key2_xcrypt(uint8_t *data, size_t len)
         }
     }
 
-    nds_cart_state.key2_x = x;
-    nds_cart_state.key2_y = y;
+    key.x = x;
+    key.y = y;
+    
+    return key;
 }
 
-static uint64_t key2_encrypt_cmd(uint64_t cmd)
+uint64_t key2_encrypt_cmd(s_nds_cart_state* state, uint64_t cmd)
 {
     uint8_t cmd_data[8];
+
 #pragma GCC unroll 8
     for (size_t i = 0; i < 8; i++)
     {
@@ -1015,7 +988,7 @@ static uint64_t key2_encrypt_cmd(uint64_t cmd)
         cmd <<= 8;
     }
 
-    key2_xcrypt(cmd_data, sizeof(cmd_data));
+    state->key2 = key2_xcrypt(state, cmd_data, sizeof(cmd_data));
 
     cmd = 0;
 #pragma GCC unroll 8
@@ -1024,5 +997,6 @@ static uint64_t key2_encrypt_cmd(uint64_t cmd)
         cmd <<= 8;
         cmd |= cmd_data[i];
     }
+
     return cmd;
 }
