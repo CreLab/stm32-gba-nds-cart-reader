@@ -9,16 +9,10 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
-void nds_cart_init(void);
-
-void nds_cart_cmd_chip_id(uint8_t data[4]); // returned bytes; 4
-void nds_cart_rom_read(size_t byte_addr, uint8_t *data, size_t len);
-bool nds_cart_rom_init(void);
-
 extern unsigned char nds_cart_key[];
 extern unsigned char dsi_cart_key[];
 
-struct nds_romctrl
+typedef struct s_nds_romctrl
 {
     uint32_t gap1_len : 13;
     uint32_t key2_encypt_data : 1;
@@ -33,29 +27,64 @@ struct nds_romctrl
     uint32_t unk_29 : 1;
     uint32_t unk_30 : 1;
     uint32_t _status : 1;
-};
+} s_nds_romctrl;
 
-static_assert(sizeof(struct nds_romctrl) == 4, "nds_romctrl must be of size 4");
+static_assert(sizeof(s_nds_romctrl) == 4, "nds_romctrl must be of size 4");
 
-struct nds_chip_id
+typedef struct s_nds_chip_id
 {
-    uint32_t manufacturer : 8;
+/*    uint32_t manufacturer : 8;
     uint32_t chip_size : 8;
     uint32_t infrared : 1;
     uint32_t unk_17 : 1;
     uint32_t unk_18 : 5;
     uint32_t unk_23 : 1;
-    uint32_t unk_24 : 3;
+    uint32_t unk_24 : 3;*/
     uint32_t nand : 1;
-    uint32_t is_3ds : 1;
+/*    uint32_t is_3ds : 1;
     uint32_t unk_29 : 1;
-    uint32_t dsi : 1;
+    uint32_t dsi : 1;*/
     uint32_t cart_protocol : 1;
-};
+} s_nds_chip_id;
 
-static_assert(sizeof(struct nds_chip_id) == 4, "nds_chip_id must be of size 4");
+static_assert(sizeof(s_nds_chip_id) == 4, "nds_chip_id must be of size 4");
 
-struct nds_header
+typedef struct s_key2
+{
+    uint64_t x;
+    uint64_t y;
+} s_key2;
+
+typedef struct s_nds_cart_state
+{
+    uint8_t state;
+    bool normal_gap_clk : 1;
+    bool key1_gap_clk : 1;
+    bool normal_clk_rate : 1;
+    bool key1_clk_rate : 1;
+    bool nds : 1;
+    bool dsi : 1;
+    bool has_secure_area : 1;
+    bool protocol_rev : 1;
+    uint8_t normal_gap2;
+    uint8_t key1_gap2;
+    uint16_t normal_gap1;
+    uint16_t key1_gap1;
+    uint16_t key1_delay_ms;
+    uint32_t game_code;
+    uint32_t secure_area_disable[2];
+    uint8_t seed_byte;
+    s_nds_chip_id chip_id;
+    uint32_t kkkkk;
+    uint16_t iii;
+    uint16_t jjj;
+    uint16_t llll;
+    uint16_t mmm;
+    uint16_t nnn;
+    s_key2 key2;
+} s_nds_cart_state;
+
+typedef struct s_nds_header
 {
     /* 0x000 */ char game_title[12];
     /* 0x00C */ union
@@ -92,8 +121,8 @@ struct nds_header
     /* 0x054 */ uint32_t file_arm9_overlay_size;
     /* 0x058 */ uint32_t file_arm7_overlay_offset;
     /* 0x05C */ uint32_t file_arm7_overlay_size;
-    /* 0x060 */ struct nds_romctrl gamecart_bus_timing_normal;
-    /* 0x064 */ struct nds_romctrl gamecart_bus_timing_key1;
+    /* 0x060 */ s_nds_romctrl gamecart_bus_timing_normal;
+    /* 0x064 */ s_nds_romctrl gamecart_bus_timing_key1;
     /* 0x068 */ uint32_t icon_title_offset;
     /* 0x06C */ uint16_t secure_area_crc16;
     /* 0x06E */ uint16_t secure_area_delay;
@@ -128,11 +157,22 @@ struct nds_header
     /* 0x38C */ uint8_t dsi_hmac_overlay_arm9_nitrofat[14];
     /* 0x39A */ uint8_t padding7[0xBE6];
     /* 0xF80 */ uint8_t dsi_rsa_signature[0x80];
-};
+} s_nds_header;
 
-_Static_assert(sizeof(struct nds_header) == 0x1000u, "wrongly sized nds_header struct");
+static_assert(sizeof(s_nds_header) == 0x1000u, "wrongly sized nds_header struct");
 
-#define NDS_PROTOCOL_MSK 0x80000000u
+void nds_cart_init(void);
+
+void nds_cart_cmd_chip_id(uint8_t data[4]); // returned bytes; 4
+void nds_cart_rom_read(size_t byte_addr, uint8_t *data, size_t len);
+bool nds_cart_rom_init(void);
+
+uint64_t key1_encrypt_cmd(uint64_t cmd);
+uint64_t key1_decrypt_cmd(uint64_t cmd);
+
+s_key2 key2_init(bool hw_reset);
+s_key2 key2_xcrypt(s_key2 key2, uint8_t *data, size_t len);
+uint64_t key2_encrypt_cmd(s_nds_cart_state *state, uint64_t cmd);
 
 #ifdef __cplusplus
 }

@@ -49,9 +49,23 @@ if (ENABLE_UNIT_TESTS)
 
     add_subdirectory(tests)
 else ()
+    set(CMAKE_PROJECT_SRC
+        ${CMAKE_SOURCE_DIR}/src/gba_cart.c
+        ${CMAKE_SOURCE_DIR}/src/nds_cart.c
+        ${CMAKE_SOURCE_DIR}/src/nds_cart_key.c
+        ${CMAKE_SOURCE_DIR}/src/usart.c
+        ${CMAKE_SOURCE_DIR}/src/util.c
+        ${CMAKE_SOURCE_DIR}/src/main.c
+        ${CMAKE_SOURCE_DIR}/src/usbd/host_interface.c
+        ${CMAKE_SOURCE_DIR}/src/usbd/usb_device.c
+        ${CMAKE_SOURCE_DIR}/src/usbd/usbd_cdc_if.c
+        ${CMAKE_SOURCE_DIR}/src/usbd/usbd_conf.c
+        ${CMAKE_SOURCE_DIR}/src/usbd/usbd_desc.c
+    )
+
     add_executable(${CMAKE_PROJECT_NAME})
-    target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_PROJECT_INTERFACE} stm32_lib usbd_lib)
+    target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_PROJECT_SRC})
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_PROJECT_INTERFACE} stm32_lib usbd_lib usbd_lib_interface)
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.map)
     add_dependencies(${CMAKE_PROJECT_NAME} run_script)
 
