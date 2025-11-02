@@ -12,6 +12,20 @@ extern "C" {
 extern unsigned char nds_cart_key[];
 extern unsigned char dsi_cart_key[];
 
+typedef enum e_nds_cart_state
+{
+    NDS_CART_UNINITIALIZED,
+    NDS_CART_RAW,
+    NDS_CART_KEY1,
+    NDS_CART_KEY2,
+} e_nds_cart_state;
+
+typedef enum e_nds_cart_clk_rate
+{
+    NDS_CART_CLK_6P7_MHZ,
+    NDS_CART_CLK_4P2_MHZ,
+} e_nds_cart_clk_rate;
+
 typedef struct s_nds_romctrl
 {
     uint32_t gap1_len : 13;
@@ -33,7 +47,7 @@ static_assert(sizeof(s_nds_romctrl) == 4, "nds_romctrl must be of size 4");
 
 typedef struct s_nds_chip_id
 {
-/*    uint32_t manufacturer : 8;
+/*  uint32_t manufacturer : 8;
     uint32_t chip_size : 8;
     uint32_t infrared : 1;
     uint32_t unk_17 : 1;
@@ -41,7 +55,7 @@ typedef struct s_nds_chip_id
     uint32_t unk_23 : 1;
     uint32_t unk_24 : 3;*/
     uint32_t nand : 1;
-/*    uint32_t is_3ds : 1;
+/*  uint32_t is_3ds : 1;
     uint32_t unk_29 : 1;
     uint32_t dsi : 1;*/
     uint32_t cart_protocol : 1;
@@ -55,13 +69,13 @@ typedef struct s_key2
     uint64_t y;
 } s_key2;
 
-typedef struct s_nds_cart_state
+typedef struct s_nds_cart_config
 {
-    uint8_t state;
+    e_nds_cart_state state;
     bool normal_gap_clk : 1;
     bool key1_gap_clk : 1;
-    bool normal_clk_rate : 1;
-    bool key1_clk_rate : 1;
+    e_nds_cart_clk_rate normal_clk_rate;
+    e_nds_cart_clk_rate key1_clk_rate;
     bool nds : 1;
     bool dsi : 1;
     bool has_secure_area : 1;
@@ -82,7 +96,7 @@ typedef struct s_nds_cart_state
     uint16_t mmm;
     uint16_t nnn;
     s_key2 key2;
-} s_nds_cart_state;
+} s_nds_cart_config;
 
 typedef struct s_nds_header
 {
@@ -163,6 +177,8 @@ static_assert(sizeof(s_nds_header) == 0x1000u, "wrongly sized nds_header struct"
 
 void nds_cart_init(void);
 
+void nds_cart_exec_command(s_nds_cart_config* cfg, uint64_t org_cmd, uint8_t *data, size_t len);
+
 void nds_cart_cmd_chip_id(uint8_t data[4]); // returned bytes; 4
 void nds_cart_rom_read(size_t byte_addr, uint8_t *data, size_t len);
 bool nds_cart_rom_init(void);
@@ -172,7 +188,7 @@ uint64_t key1_decrypt_cmd(uint64_t cmd);
 
 s_key2 key2_init(bool hw_reset);
 s_key2 key2_xcrypt(s_key2 key2, uint8_t *data, size_t len);
-uint64_t key2_encrypt_cmd(s_nds_cart_state *state, uint64_t cmd);
+uint64_t key2_encrypt_cmd(s_nds_cart_config* cfg, uint64_t cmd);
 
 #ifdef __cplusplus
 }

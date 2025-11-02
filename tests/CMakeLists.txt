@@ -17,7 +17,7 @@ set(USB_LIB_SRC
 add_library(stm32_data_mock OBJECT)
 target_sources(stm32_data_mock PRIVATE stm32_data_mock.cpp)
 target_include_directories(stm32_data_mock PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(stm32_data_mock PRIVATE stm32_lib_interface)
+target_link_libraries(stm32_data_mock PRIVATE stm32_lib_interface ${CMAKE_PROJECT_INTERFACE})
 
 add_unit_test(test_nintendo_cartridge_reader
         SOURCES nintendo_cartridge_reader_tests.cpp

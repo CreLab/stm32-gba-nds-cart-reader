@@ -5,26 +5,7 @@
 
 #include "nds_cart.h"
 #include "util.h"
-
-/*
- * Wiring:
- * PORTC[0..7]  <-> NDS_DATA[0..7]
- * PORTC[8]     <-> NDS_CLK
- * PORTC[9]     <-> NDS_ROMCS
- * PORTC[10]    <-> NDS_RESET
- * PORTC[11]    <-> NDS_EEPROMCS
- *
- * On all transfers, data should be stable at rising edge of CLK
- */
-
-#define PIN_CLK 8u
-#define PIN_CLK_MSK (1u << PIN_CLK)
-#define PIN_ROMCS 9u
-#define PIN_ROMCS_MSK (1u << PIN_ROMCS)
-#define PIN_RESET 10u
-#define PIN_RESET_MSK (1u << PIN_RESET)
-#define PIN_EEPROMCS 11u
-#define PIN_EEPROMCS_MSK (1u << PIN_EEPROMCS)
+#include "gpios.h"
 
 #define NDS_PAGE_SIZE 0x1000
 #define NDS_CHUNK_SIZE 0x200
@@ -45,49 +26,6 @@ static void print_chip_id(const s_nds_chip_id *id)
     uint8_t bid[4];
     memcpy(bid, id, 4);
     uart_printf("chip_id: %02x %02x %02x %02x\r\n", bid[0], bid[1], bid[2], bid[3]);
-}
-
-__attribute__((always_inline)) static inline void clk_low(void) { GPIOC->BSRR = PIN_CLK_MSK << 16; }
-
-__attribute__((always_inline)) static inline void clk_high(void) { GPIOC->BSRR = PIN_CLK_MSK; }
-
-__attribute__((always_inline)) static inline void romcs_low(void)
-{
-    GPIOC->BSRR = PIN_ROMCS_MSK << 16;
-}
-
-__attribute__((always_inline)) static inline void romcs_high(void) { GPIOC->BSRR = PIN_ROMCS_MSK; }
-
-__attribute__((always_inline)) static inline void reset_low(void)
-{
-    GPIOC->BSRR = PIN_RESET_MSK << 16;
-}
-
-__attribute__((always_inline)) static inline void reset_high(void) { GPIOC->BSRR = PIN_RESET_MSK; }
-
-__attribute__((always_inline)) static inline void eepromcs_low(void)
-{
-    GPIOC->BSRR = PIN_EEPROMCS_MSK << 16;
-}
-
-__attribute__((always_inline)) static inline void eepromcs_high(void)
-{
-    GPIOC->BSRR = PIN_EEPROMCS_MSK;
-}
-
-__attribute__((always_inline)) static inline void data_dir_input(void) { GPIOC->CRL = 0x44444444; }
-
-__attribute__((always_inline)) static inline uint8_t data_input(void)
-{
-    return (uint8_t) GPIOC->IDR;
-}
-
-__attribute__((always_inline)) static inline void data_dir_output() { GPIOC->CRL = 0x11111111; }
-
-__attribute__((always_inline)) static inline void data_output(uint8_t v)
-{
-    uint8_t nv = (uint8_t) ~v;
-    GPIOC->BSRR = (uint32_t) (v | (nv << 16));
 }
 
 __attribute__((always_inline)) static inline uint8_t data_in_cycle(size_t cycles)
@@ -129,31 +67,16 @@ __attribute__((always_inline)) static inline void data_out_cycle_67(uint8_t d)
     data_out_cycle(d, 5);
 }
 
-enum nds_cart_state_t
-{
-    NDS_CART_UNINITIALIZED,
-    NDS_CART_RAW,
-    NDS_CART_KEY1,
-    NDS_CART_KEY2,
-};
-
 enum nds_proto_rev
 {
     NDS_PROTO_REV_MROM,
     NDS_PROTO_REV_1TROM_NAND,
 };
 
-enum nds_cart_clk_rate
-{
-    NDS_CART_CLK_6P7_MHZ,
-    NDS_CART_CLK_4P2_MHZ,
-};
-
-s_nds_cart_state nds_cart_state;
+s_nds_cart_config nds_cart_state;
 
 static s_blowfish_t blowfish_buf = {0};
 
-static void nds_cart_exec_command(uint64_t cmd, uint8_t *data, size_t len);
 static void nds_cart_cmd_dummy(void);
 static void nds_cart_cmd_main_data_read(uint8_t *data, uint32_t addr);
 static void nds_cart_cmd_enable_key1_nds(void);
@@ -267,38 +190,36 @@ static void nds_cart_change_state(uint8_t state)
     }
 }
 
-static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
+void nds_cart_exec_command(s_nds_cart_config* cfg, uint64_t org_cmd, uint8_t *data, size_t len)
 {
-    assert(data != NULL);
-
     romcs_low();
     data_dir_output();
 
-    bool clk_rate;
+    e_nds_cart_clk_rate clk_rate;
     bool gap_clk;
     bool key2_result;
     size_t gap1;
     size_t gap2;
     uint64_t cmd;
 
-    if (nds_cart_state.state == NDS_CART_KEY1)
+    if (cfg->state == NDS_CART_KEY1)
     {
-        clk_rate = nds_cart_state.key1_clk_rate;
-        gap_clk = nds_cart_state.key1_gap_clk;
-        gap1 = nds_cart_state.key1_gap1 + nds_cart_state.key1_gap2;
-        gap2 = nds_cart_state.key1_gap2;
+        clk_rate = cfg->key1_clk_rate;
+        gap_clk = cfg->key1_gap_clk;
+        gap1 = cfg->key1_gap1 + cfg->key1_gap2;
+        gap2 = cfg->key1_gap2;
 
         cmd = key1_encrypt_cmd(org_cmd);
         key2_result = true;
     }
     else
     {
-        clk_rate = nds_cart_state.normal_clk_rate;
-        gap_clk = nds_cart_state.normal_gap_clk;
-        gap1 = nds_cart_state.normal_gap1 + nds_cart_state.normal_gap2;
-        gap2 = nds_cart_state.normal_gap2;
+        clk_rate = cfg->normal_clk_rate;
+        gap_clk = cfg->normal_gap_clk;
+        gap1 = cfg->normal_gap1 + cfg->normal_gap2;
+        gap2 = cfg->normal_gap2;
 
-        if (nds_cart_state.state == NDS_CART_KEY2)
+        if (cfg->state == NDS_CART_KEY2)
         {
             cmd = key2_encrypt_cmd(&nds_cart_state, org_cmd);
             key2_result = true;
@@ -347,7 +268,7 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
         }
 
         if (key2_result)
-            nds_cart_state.key2 = key2_xcrypt(nds_cart_state.key2, NULL, gap1);
+            cfg->key2 = key2_xcrypt(cfg->key2, NULL, gap1);
     }
     else
     {
@@ -375,7 +296,7 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
         }
 
         if (key2_result)
-            nds_cart_state.key2 = key2_xcrypt(nds_cart_state.key2, data, block_size);
+            cfg->key2 = key2_xcrypt(cfg->key2, data, block_size);
 
         data += block_size;
         len -= block_size;
@@ -397,13 +318,14 @@ static void nds_cart_exec_command(uint64_t org_cmd, uint8_t *data, size_t len)
             }
 
             if (key2_result)
-                nds_cart_state.key2 = key2_xcrypt(nds_cart_state.key2, NULL, gap2);
+                cfg->key2 = key2_xcrypt(cfg->key2, NULL, gap2);
         }
         else
         {
             WAIT(gap2 * 12);
         }
     }
+
 
 cmdend:
     data_dir_input();
@@ -415,7 +337,7 @@ static void nds_cart_cmd_dummy(void)
 {
     const uint64_t cmd = 0x9F00000000000000;
     uint8_t dummy_data[0x2000];
-    nds_cart_exec_command(cmd, dummy_data, sizeof(dummy_data));
+    nds_cart_exec_command(&nds_cart_state, cmd, dummy_data, sizeof(dummy_data));
 }
 
 static void nds_cart_rom_read_page(uint8_t *read_buffer, size_t page_addr)
@@ -563,17 +485,17 @@ static void nds_cart_read_header(uint8_t *data, bool extended)
             {
                 size_t chunk_addr = chunk * NDS_CHUNK_SIZE;
                 cmd |= (uint64_t) chunk_addr << 24;
-                nds_cart_exec_command(cmd, &data[chunk_addr], NDS_CHUNK_SIZE);
+                nds_cart_exec_command(&nds_cart_state, cmd, &data[chunk_addr], NDS_CHUNK_SIZE);
             }
         }
         else
         {
-            nds_cart_exec_command(cmd, data, NDS_EXT_HEADER_SIZE);
+            nds_cart_exec_command(&nds_cart_state,cmd, data, NDS_EXT_HEADER_SIZE);
         }
     }
     else
     {
-        nds_cart_exec_command(cmd, data, NDS_SMALL_HEADER_SIZE);
+        nds_cart_exec_command(&nds_cart_state,cmd, data, NDS_SMALL_HEADER_SIZE);
         for (size_t i = NDS_SMALL_HEADER_SIZE; i < NDS_EXT_HEADER_SIZE; i++)
             data[i] = 0;
     }
@@ -585,7 +507,7 @@ void nds_cart_cmd_chip_id(uint8_t data[4])
 
     const uint64_t cmd = 0x9000000000000000;
 
-    nds_cart_exec_command(cmd, data, 4);
+    nds_cart_exec_command(&nds_cart_state, cmd, data, 4);
 }
 
 static void nds_cart_cmd_main_data_read(uint8_t *data, uint32_t addr)
@@ -593,7 +515,7 @@ static void nds_cart_cmd_main_data_read(uint8_t *data, uint32_t addr)
     uint64_t cmd = 0xB700000000000000;
     cmd |= ((uint64_t) addr & 0xFFFFFFFF) << 24;
 
-    nds_cart_exec_command(cmd, data, NDS_CHUNK_SIZE);
+    nds_cart_exec_command(&nds_cart_state, cmd, data, NDS_CHUNK_SIZE);
 }
 
 static void nds_cart_cmd_enable_key1_nds(void)
@@ -603,7 +525,7 @@ static void nds_cart_cmd_enable_key1_nds(void)
     cmd |= (uint64_t) (nds_cart_state.iii & 0xFFF) << 44;
     cmd |= (uint64_t) (nds_cart_state.jjj & 0xFFF) << 32;
     cmd |= (uint64_t) (nds_cart_state.kkkkk & 0xFFFFF) << 8;
-    nds_cart_exec_command(cmd, reply, 0);
+    nds_cart_exec_command(&nds_cart_state, cmd, reply, 0);
 }
 
 static void nds_cart_cmd_enable_key2(void)
@@ -622,15 +544,15 @@ static void nds_cart_cmd_enable_key2(void)
     if (nds_cart_state.protocol_rev == NDS_PROTO_REV_MROM)
     {
         HAL_Delay(nds_cart_state.key1_delay_ms);
-        nds_cart_exec_command(cmd, reply, 0);
+        nds_cart_exec_command(&nds_cart_state, cmd, reply, 0);
         nds_cart_state.key2 = key2_init(false);
     }
     else
     {
-        nds_cart_exec_command(cmd, reply, 0);
+        nds_cart_exec_command(&nds_cart_state, cmd, reply, 0);
         HAL_Delay(nds_cart_state.key1_delay_ms);
         nds_cart_state.key2 = key2_init(false);
-        nds_cart_exec_command(cmd, reply, 0);
+        nds_cart_exec_command(&nds_cart_state, cmd, reply, 0);
     }
 
     nds_cart_state.kkkkk += 1;
@@ -649,13 +571,13 @@ static void nds_cart_cmd_chip_id_key1(s_nds_chip_id *chip_id)
     if (nds_cart_state.protocol_rev == NDS_PROTO_REV_MROM)
     {
         HAL_Delay(nds_cart_state.key1_delay_ms);
-        nds_cart_exec_command(cmd, (uint8_t *) chip_id, sizeof(*chip_id));
+        nds_cart_exec_command(&nds_cart_state, cmd, (uint8_t *) chip_id, sizeof(*chip_id));
     }
     else
     {
-        nds_cart_exec_command(cmd, (uint8_t *) chip_id, 0);
+        nds_cart_exec_command(&nds_cart_state, cmd, (uint8_t *) chip_id, 0);
         HAL_Delay(nds_cart_state.key1_delay_ms);
-        nds_cart_exec_command(cmd, (uint8_t *) chip_id, sizeof(*chip_id));
+        nds_cart_exec_command(&nds_cart_state, cmd, (uint8_t *) chip_id, sizeof(*chip_id));
     }
 
     nds_cart_state.kkkkk += 1;
@@ -675,15 +597,15 @@ static void nds_cart_cmd_get_secure_area(uint8_t *data, size_t page)
     if (nds_cart_state.protocol_rev == NDS_PROTO_REV_MROM)
     {
         HAL_Delay(nds_cart_state.key1_delay_ms);
-        nds_cart_exec_command(cmd, data, NDS_PAGE_SIZE);
+        nds_cart_exec_command(&nds_cart_state, cmd, data, NDS_PAGE_SIZE);
     }
     else
     {
-        nds_cart_exec_command(cmd, data, 0);
+        nds_cart_exec_command(&nds_cart_state, cmd, data, 0);
         HAL_Delay(nds_cart_state.key1_delay_ms);
         for (size_t i = 0; i < NDS_PAGE_SIZE / NDS_CHUNK_SIZE; i++)
         {
-            nds_cart_exec_command(cmd, data, NDS_CHUNK_SIZE);
+            nds_cart_exec_command(&nds_cart_state, cmd, data, NDS_CHUNK_SIZE);
             data += NDS_CHUNK_SIZE;
         }
     }
@@ -705,13 +627,13 @@ static void nds_cart_cmd_enable_data_mode(void)
     if (nds_cart_state.protocol_rev == NDS_PROTO_REV_MROM)
     {
         HAL_Delay(nds_cart_state.key1_delay_ms);
-        nds_cart_exec_command(cmd, reply, 0);
+        nds_cart_exec_command(&nds_cart_state, cmd, reply, 0);
     }
     else
     {
-        nds_cart_exec_command(cmd, reply, 0);
+        nds_cart_exec_command(&nds_cart_state, cmd, reply, 0);
         HAL_Delay(nds_cart_state.key1_delay_ms);
-        nds_cart_exec_command(cmd, reply, 0);
+        nds_cart_exec_command(&nds_cart_state, cmd, reply, 0);
     }
 
     nds_cart_state.kkkkk += 1;
@@ -722,7 +644,7 @@ static void nds_cart_cmd_chip_id_key2(s_nds_chip_id *chip_id)
     assert(nds_cart_state.state == NDS_CART_KEY2);
 
     const uint64_t cmd = 0xB800000000000000;
-    nds_cart_exec_command(cmd, (uint8_t *) chip_id, sizeof(*chip_id));
+    nds_cart_exec_command(&nds_cart_state, cmd, (uint8_t *) chip_id, sizeof(*chip_id));
 }
 
 static void nds_cart_read_main_data_page(uint8_t *data, size_t page)
@@ -977,7 +899,7 @@ s_key2 key2_xcrypt(s_key2 key2, uint8_t *data, size_t len)
     return key;
 }
 
-uint64_t key2_encrypt_cmd(s_nds_cart_state* state, uint64_t cmd)
+uint64_t key2_encrypt_cmd(s_nds_cart_config * cfg, uint64_t cmd)
 {
     uint8_t cmd_data[8];
 
@@ -988,7 +910,7 @@ uint64_t key2_encrypt_cmd(s_nds_cart_state* state, uint64_t cmd)
         cmd <<= 8;
     }
 
-    state->key2 = key2_xcrypt(state->key2, cmd_data, sizeof(cmd_data));
+    cfg->key2 = key2_xcrypt(cfg->key2, cmd_data, sizeof(cmd_data));
 
     cmd = 0;
 #pragma GCC unroll 8

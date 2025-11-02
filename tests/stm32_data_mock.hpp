@@ -4,6 +4,7 @@
 
 extern "C" {
 #include "stm32f1xx_hal.h"
+#include "gpios.h"
 }
 
 #endif /* STM32_DATA_MOCK_HPP */

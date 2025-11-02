@@ -3,6 +3,46 @@
 HAL_TickFreqTypeDef uwTickFreq = HAL_TICK_FREQ_DEFAULT;
 volatile uint32_t uwTick = 0;
 
+uint32_t inDataCnt = 0;
+uint8_t bit = 0;
+uint8_t inData[8] = {0x23, 0x56, 0xAB, 0xC3, 0x45, 0xEF, 0x03, 0xD5};
+uint8_t outData[8] = {0};
+
+void clk_low(void)
+{};
+
+void clk_high(void)
+{};
+
+void romcs_low(void) {};
+void romcs_high(void) {};
+void reset_low(void) {};
+void reset_high(void) {};
+void eepromcs_low(void) {};
+void eepromcs_high(void) {};
+void data_dir_input(void) {};
+
+uint8_t data_input(void)
+{
+    uint8_t ret = inData[inDataCnt];
+    inDataCnt++;
+
+    if (inDataCnt > 7)
+    {
+        inDataCnt = 0;
+    }
+
+    return ret;
+};
+
+void data_dir_output(void) {};
+
+void data_output(uint8_t v)
+{
+    outData[bit] = v;
+    bit++;
+};
+
 void HAL_IncTick(void) { uwTick += uwTickFreq; }
 
 uint32_t HAL_GetTick(void) { return uwTick++; }
