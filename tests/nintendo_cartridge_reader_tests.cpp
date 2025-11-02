@@ -9,14 +9,57 @@ extern "C" {
 }
 
 template <>
+std::string ApprovalTests::StringMaker::toString(const s_key1& key)
+{
+    return "[" + std::to_string(key.x) + ", " + std::to_string(key.y) + "]";
+}
+
+template <>
 std::string ApprovalTests::StringMaker::toString(const s_key2& key)
 {
     return "[" + std::to_string(key.x) + ", " + std::to_string(key.y) + "]";
 }
 
+template <>
+std::string ApprovalTests::StringMaker::toString(const s_blowfish_t& buf)
+{
+    std::ostringstream oss;
+    oss << "s_blowfish_t {\n";
+
+    // P-Array (18 Einträge)
+    oss << "  P: [";
+    for (size_t i = 0; i < 16; ++i)
+        oss << buf.P[i] << ", ";
+    oss << buf.P[17] << "]\n";
+
+    // S-Array (4 x 256 Einträge)
+    oss << "  S: [\n";
+    for (size_t row = 0; row < 4; ++row)
+    {
+        oss << "    [";
+        for (size_t col = 0; col < 254; ++col)
+            oss << buf.S[row][col] << ", ";
+        oss << buf.S[row][255] << "]\n";
+    }
+    oss << "  ]\n";
+
+    oss << "}";
+    return oss.str();
+}
+
+std::ostream& operator<<(std::ostream& os, const s_key1& key)
+{
+    return os << ApprovalTests::StringMaker::toString(key);
+}
+
 std::ostream& operator<<(std::ostream& os, const s_key2& key)
 {
     return os << ApprovalTests::StringMaker::toString(key);
+}
+
+std::ostream& operator<<(std::ostream& os, const s_blowfish_t& buf)
+{
+    return os << ApprovalTests::StringMaker::toString(buf);
 }
 
 namespace CartridgeReader
@@ -26,7 +69,15 @@ namespace CartridgeReader
         std::array<uint64_t, 2> currentCmdValues{1209961685412968144, 1541103208622303741};
 
         auto functionConverter = [](uint64_t cmd){
-            return key1_encrypt_cmd(cmd);
+            s_blowfish_t buf = {0};
+            memset(&buf, 0, sizeof(s_blowfish_t));
+
+            s_key1 key = {0};
+            key.y = (uint32_t)(cmd & 0x00000000FFFFFFFF);
+            key.x = (uint32_t)((cmd & 0xFFFFFFFF00000000) >> 32);
+            key = key1_encrypt_64bit(&buf, key);
+
+            return ((uint64_t)key.x << 32) | (uint64_t)key.y;
         };
 
         ApprovalTests::CombinationApprovals::verifyAllCombinations(
@@ -46,6 +97,29 @@ namespace CartridgeReader
         ApprovalTests::CombinationApprovals::verifyAllCombinations(
                 functionConverter,
                 currentCmdValues
+        );
+    }
+
+    TEST_CASE("key1_apply_keycode approval test")
+    {
+        std::array<uint32_t, 1> currentXValues{564248};
+        std::array<uint32_t, 1> currentYValues{784248};
+        std::array<uint32_t, 1> currentZValues{235532};
+
+        auto functionConverter = [](uint32_t value1, uint32_t value2, uint32_t value3){
+            s_blowfish_t buf = {0};
+            memset(&buf, 1, sizeof(s_blowfish_t));
+
+            uint32_t keycode[3] = {value1, value2, value3};
+
+            return key1_apply_keycode(&buf, keycode, 8);
+        };
+
+        ApprovalTests::CombinationApprovals::verifyAllCombinations(
+                functionConverter,
+                currentXValues,
+                      currentYValues,
+                      currentZValues
         );
     }
 

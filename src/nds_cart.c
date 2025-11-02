@@ -170,10 +170,6 @@ static void nds_cart_read_secure_area_page(uint8_t *data, size_t page);
 
 static void nds_cart_reset(void);
 
-static void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, bool dsi);
-static void key1_encrypt_64bit(uint32_t *data);
-static void key1_decrypt_64bit(uint32_t *data);
-
 static void nds_cart_begin_key1(void)
 {
     myassert(nds_cart_state.state == NDS_CART_RAW,
@@ -183,7 +179,7 @@ static void nds_cart_begin_key1(void)
                                        nds_cart_state.secure_area_disable[1]};
 
     key1_init_keycode(nds_cart_state.game_code, 1, 8, false);
-    key1_decrypt_64bit(secure_area_disable);
+    key1_decrypt_64bit(&blowfish_buf, secure_area_disable);
     key1_init_keycode(nds_cart_state.game_code, 2, 8, false);
 
     nds_cart_cmd_enable_key1_nds();
@@ -753,11 +749,11 @@ static void nds_cart_read_secure_area_page(uint8_t *data, size_t page)
 
     if (page == 4)
     {
-        key1_decrypt_64bit(&secure_area_page._u32[0]);
+        key1_decrypt_64bit(&blowfish_buf, &secure_area_page._u32[0]);
         key1_init_keycode(nds_cart_state.game_code, 3, 8, false);
         const size_t SEC_AREA_KEY1_CRYPT_LEN = 0x800;
         for (size_t i = 0; i < SEC_AREA_KEY1_CRYPT_LEN / sizeof(uint32_t); i += 2)
-            key1_decrypt_64bit(&secure_area_page._u32[i]);
+            key1_decrypt_64bit(&blowfish_buf, &secure_area_page._u32[i]);
 
         if (memcmp(secure_area_page._u8, "encryObj", 8))
         {
@@ -798,57 +794,56 @@ static void nds_cart_reset(void)
     nds_cart_state.key1_gap2 = 0x18;
 }
 
-static void key1_encrypt_64bit(uint32_t *data)
+s_key1 key1_encrypt_64bit(s_blowfish_t* const buf, s_key1 cmd)
 {
-    uint32_t y = data[0];
-    uint32_t x = data[1];
+    s_key1 key = {0};
+
+    uint32_t x = cmd.x;
+    uint32_t y = cmd.y;
 
     for (int i = 0; i <= 15; i++)
     {
-        uint32_t z = blowfish_buf.P[i] ^ x;
-        x = blowfish_buf.S[0][(z >> 24) & 0xFF];
-        x = blowfish_buf.S[1][(z >> 16) & 0xFF] + x;
-        x = blowfish_buf.S[2][(z >> 8) & 0xFF] ^ x;
-        x = blowfish_buf.S[3][(z >> 0) & 0xFF] + x;
+        uint32_t z = buf->P[i] ^ x;
+        x = buf->S[0][(z >> 24) & 0xFF];
+        x = buf->S[1][(z >> 16) & 0xFF] + x;
+        x = buf->S[2][(z >> 8) & 0xFF] ^ x;
+        x = buf->S[3][(z >> 0) & 0xFF] + x;
         x = y ^ x;
         y = z;
     }
 
-    data[0] = x ^ blowfish_buf.P[16];
-    data[1] = y ^ blowfish_buf.P[17];
+    key.y = x ^ buf->P[16];
+    key.x = y ^ buf->P[17];
+
+    return key;
 }
 
-static void key1_decrypt_64bit(uint32_t *data)
+void key1_decrypt_64bit(s_blowfish_t* const buf, uint32_t *data)
 {
     uint32_t y = data[0];
     uint32_t x = data[1];
 
     for (int i = 17; i >= 2; i--)
     {
-        uint32_t z = blowfish_buf.P[i] ^ x;
-        x = blowfish_buf.S[0][(z >> 24) & 0xFF];
-        x = blowfish_buf.S[1][(z >> 16) & 0xFF] + x;
-        x = blowfish_buf.S[2][(z >> 8) & 0xFF] ^ x;
-        x = blowfish_buf.S[3][(z >> 0) & 0xFF] + x;
+        uint32_t z = buf->P[i] ^ x;
+        x = buf->S[0][(z >> 24) & 0xFF];
+        x = buf->S[1][(z >> 16) & 0xFF] + x;
+        x = buf->S[2][(z >> 8) & 0xFF] ^ x;
+        x = buf->S[3][(z >> 0) & 0xFF] + x;
         x = y ^ x;
         y = z;
     }
 
-    data[0] = x ^ blowfish_buf.P[1];
-    data[1] = y ^ blowfish_buf.P[0];
+    data[0] = x ^ buf->P[1];
+    data[1] = y ^ buf->P[0];
 }
 
 uint64_t key1_encrypt_cmd(uint64_t cmd)
 {
-    union
-    {
-        uint32_t _u32[2];
-        uint64_t _u64;
-    } u;
-
-    u._u64 = cmd;
-    key1_encrypt_64bit(u._u32);
-    return u._u64;
+    s_key1* key = (s_key1*)&cmd;
+    s_key1 keyTmp = key1_encrypt_64bit(&blowfish_buf, *key);
+    uint64_t* result = (uint64_t*)&keyTmp;
+    return *result;
 }
 
 uint64_t key1_decrypt_cmd(uint64_t cmd)
@@ -860,42 +855,52 @@ uint64_t key1_decrypt_cmd(uint64_t cmd)
     } u;
 
     u._u64 = cmd;
-    key1_decrypt_64bit(u._u32);
+    key1_decrypt_64bit(&blowfish_buf, u._u32);
     return u._u64;
 }
 
-static void key1_apply_keycode(uint32_t *keycode, uint32_t modulo)
+s_blowfish_t key1_apply_keycode(s_blowfish_t* const buf, uint32_t* keycode, uint32_t modulo)
 {
-    uint32_t scratch[2];
-    scratch[0] = scratch[1] = 0;
+    s_blowfish_t newBuf = *buf;
+    s_key1 scratch = {0};
 
-    key1_encrypt_64bit(&keycode[1]);
-    key1_encrypt_64bit(&keycode[0]);
+    s_key1 key = {keycode[2], keycode[1]};
+    key = key1_encrypt_64bit(&newBuf, key);
+    keycode[2] = key.x;
+    keycode[1] = key.y;
+
+    key.x = keycode[1];
+    key.y = keycode[0];
+    key = key1_encrypt_64bit(&newBuf, key);
+    keycode[1] = key.x;
+    keycode[0] = key.y;
 
     for (uint32_t i = 0; i < 18; i++)
     {
-        blowfish_buf.P[i] ^= __builtin_bswap32(keycode[i % (modulo / 4u)]);
+        newBuf.P[i] ^= __builtin_bswap32(keycode[i % (modulo / 4u)]);
     }
 
     for (uint32_t i = 0; i < 18; i += 2)
     {
-        key1_encrypt_64bit(scratch);
-        blowfish_buf.P[i + 0] = scratch[1];
-        blowfish_buf.P[i + 1] = scratch[0];
+        scratch = key1_encrypt_64bit(&newBuf, scratch);
+        newBuf.P[i + 0] = scratch.x;
+        newBuf.P[i + 1] = scratch.y;
     }
 
     for (uint32_t i = 0; i < 4; i++)
     {
         for (uint32_t j = 0; j < 256; j += 2)
         {
-            key1_encrypt_64bit(scratch);
-            blowfish_buf.S[i][j + 0] = scratch[1];
-            blowfish_buf.S[i][j + 1] = scratch[0];
+            scratch = key1_encrypt_64bit(&newBuf, scratch);
+            newBuf.S[i][j + 0] = scratch.x;
+            newBuf.S[i][j + 1] = scratch.y;
         }
     }
+
+    return newBuf;
 }
 
-static void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, bool dsi)
+void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, bool dsi)
 {
     uint32_t keycode[3];
 
@@ -909,15 +914,15 @@ static void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, 
     keycode[2] = idcode * 2;
 
     if (level >= 1)
-        key1_apply_keycode(keycode, modulo);
+        key1_apply_keycode(&blowfish_buf, keycode, modulo);
     if (level >= 2)
-        key1_apply_keycode(keycode, modulo);
+        key1_apply_keycode(&blowfish_buf, keycode, modulo);
 
     keycode[1] *= 2;
     keycode[2] /= 2;
 
     if (level >= 3)
-        key1_apply_keycode(keycode, modulo);
+        key1_apply_keycode(&blowfish_buf, keycode, modulo);
 }
 
 s_key2 key2_init(bool hw_reset)

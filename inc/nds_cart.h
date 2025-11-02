@@ -8,6 +8,7 @@ extern "C" {
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "util.h"
 
 extern unsigned char nds_cart_key[];
 extern unsigned char dsi_cart_key[];
@@ -48,6 +49,12 @@ typedef struct s_nds_chip_id
 } s_nds_chip_id;
 
 static_assert(sizeof(s_nds_chip_id) == 4, "nds_chip_id must be of size 4");
+
+typedef struct s_key1
+{
+    uint32_t x;
+    uint32_t y;
+} s_key1;
 
 typedef struct s_key2
 {
@@ -169,6 +176,11 @@ bool nds_cart_rom_init(void);
 
 uint64_t key1_encrypt_cmd(uint64_t cmd);
 uint64_t key1_decrypt_cmd(uint64_t cmd);
+
+void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, bool dsi);
+s_blowfish_t key1_apply_keycode(s_blowfish_t* buf, uint32_t *keycode, uint32_t modulo);
+s_key1 key1_encrypt_64bit(s_blowfish_t* buf, s_key1 cmd);
+void key1_decrypt_64bit(s_blowfish_t* buf, uint32_t *data);
 
 s_key2 key2_init(bool hw_reset);
 s_key2 key2_xcrypt(s_nds_cart_state *state, uint8_t *data, size_t len);
