@@ -914,15 +914,15 @@ void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, bool ds
     keycode[2] = idcode * 2;
 
     if (level >= 1)
-        key1_apply_keycode(&blowfish_buf, keycode, modulo);
+        blowfish_buf = key1_apply_keycode(&blowfish_buf, keycode, modulo);
     if (level >= 2)
-        key1_apply_keycode(&blowfish_buf, keycode, modulo);
+        blowfish_buf = key1_apply_keycode(&blowfish_buf, keycode, modulo);
 
     keycode[1] *= 2;
     keycode[2] /= 2;
 
     if (level >= 3)
-        key1_apply_keycode(&blowfish_buf, keycode, modulo);
+        blowfish_buf = key1_apply_keycode(&blowfish_buf, keycode, modulo);
 }
 
 s_key2 key2_init(bool hw_reset)
