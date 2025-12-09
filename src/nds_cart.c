@@ -84,7 +84,7 @@ static void nds_cart_read_header(uint8_t *data, bool extended);
 static void nds_cart_read_main_data_page(uint8_t *data, size_t page);
 static void nds_cart_read_secure_area_page(uint8_t *data, size_t page);
 
-static void nds_cart_reset(void);
+static void nds_cart_reset(s_nds_cart_config *ctrl);
 
 static void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, bool dsi);
 static void key1_encrypt_64bit(const s_blowfish_t *pBuf, uint32_t *data);
@@ -139,6 +139,8 @@ static void nds_cart_begin_key2(void)
 
 void nds_cart_init(void)
 {
+    static s_nds_cart_config ctrl = {0};
+
     data_dir_input();
     clk_high();
     romcs_high();
@@ -146,14 +148,14 @@ void nds_cart_init(void)
     eepromcs_high();
     MODIFY_REG(GPIOC->CRH, 0xFFFFu, 0x1111u);
 
-    nds_cart_reset();
+    nds_cart_reset(&ctrl);
 }
 
 static void nds_cart_change_state(uint8_t state)
 {
     if (state == NDS_CART_UNINITIALIZED)
     {
-        nds_cart_reset();
+        nds_cart_reset(&nds_cart_state);
     }
     else if (state == NDS_CART_RAW && nds_cart_state.state != NDS_CART_RAW)
     {
@@ -183,7 +185,7 @@ static void nds_cart_change_state(uint8_t state)
     }
 }
 
-void nds_cart_exec_command(s_nds_cart_config* cfg, uint64_t org_cmd, uint8_t *data, size_t len)
+void nds_cart_exec_command(s_nds_cart_config* ctrl, uint64_t org_cmd, uint8_t *data, size_t len)
 {
     romcs_low();
     data_dir_output();
@@ -195,26 +197,26 @@ void nds_cart_exec_command(s_nds_cart_config* cfg, uint64_t org_cmd, uint8_t *da
     size_t gap2;
     uint64_t cmd;
 
-    if (cfg->state == NDS_CART_KEY1)
+    if (ctrl->state == NDS_CART_KEY1)
     {
-        clk_rate = cfg->key1_clk_rate;
-        gap_clk = cfg->key1_gap_clk;
-        gap1 = cfg->key1_gap1 + cfg->key1_gap2;
-        gap2 = cfg->key1_gap2;
+        clk_rate = ctrl->key1_clk_rate;
+        gap_clk = ctrl->key1_gap_clk;
+        gap1 = ctrl->key1_gap1 + ctrl->key1_gap2;
+        gap2 = ctrl->key1_gap2;
 
         cmd = key1_encrypt_cmd(org_cmd);
         key2_result = true;
     }
     else
     {
-        clk_rate = cfg->normal_clk_rate;
-        gap_clk = cfg->normal_gap_clk;
-        gap1 = cfg->normal_gap1 + cfg->normal_gap2;
-        gap2 = cfg->normal_gap2;
+        clk_rate = ctrl->normal_clk_rate;
+        gap_clk = ctrl->normal_gap_clk;
+        gap1 = ctrl->normal_gap1 + ctrl->normal_gap2;
+        gap2 = ctrl->normal_gap2;
 
-        if (cfg->state == NDS_CART_KEY2)
+        if (ctrl->state == NDS_CART_KEY2)
         {
-            cmd = key2_encrypt_cmd(&nds_cart_state, org_cmd);
+            cmd = key2_encrypt_cmd(ctrl, org_cmd);
             key2_result = true;
         }
         else
@@ -262,7 +264,7 @@ void nds_cart_exec_command(s_nds_cart_config* cfg, uint64_t org_cmd, uint8_t *da
 
         if (key2_result)
         {
-            cfg->key2 = key2_xcrypt(cfg->key2, NULL, gap1);
+            ctrl->key2 = key2_xcrypt(ctrl->key2, NULL, gap1);
         }
     }
     else
@@ -297,7 +299,7 @@ void nds_cart_exec_command(s_nds_cart_config* cfg, uint64_t org_cmd, uint8_t *da
 
             if (key2_result)
             {
-                cfg->key2 = key2_xcrypt(cfg->key2, data, block_size);
+                ctrl->key2 = key2_xcrypt(ctrl->key2, data, block_size);
             }
 
             data += block_size;
@@ -327,7 +329,7 @@ void nds_cart_exec_command(s_nds_cart_config* cfg, uint64_t org_cmd, uint8_t *da
 
                 if (key2_result)
                 {
-                    cfg->key2 = key2_xcrypt(cfg->key2, NULL, gap2);
+                    ctrl->key2 = key2_xcrypt(ctrl->key2, NULL, gap2);
                 }
             }
             else
@@ -413,7 +415,7 @@ void nds_cart_rom_read(size_t byte_addr, uint8_t *data, size_t len)
 
 bool nds_cart_rom_init(void)
 {
-    nds_cart_reset();
+    nds_cart_reset(&nds_cart_state);
 
     HAL_Delay(10);
 
@@ -709,24 +711,24 @@ static void nds_cart_read_secure_area_page(uint8_t *data, size_t page)
     memcpy(data, secure_area_page._u8, sizeof(secure_area_page._u8));
 }
 
-static void nds_cart_reset(void)
+static void nds_cart_reset(s_nds_cart_config *ctrl)
 {
     reset_low();
     HAL_Delay(10);
     reset_high();
 
-    nds_cart_state.state = NDS_CART_UNINITIALIZED;
-    nds_cart_state.normal_gap_clk = false;
-    nds_cart_state.key1_gap_clk = false;
-    nds_cart_state.normal_clk_rate = false;
-    nds_cart_state.key1_clk_rate = false;
-    nds_cart_state.nds = true;
-    nds_cart_state.dsi = false;
-    nds_cart_state.has_secure_area = true;
-    nds_cart_state.normal_gap1 = 0x8F8;
-    nds_cart_state.key1_gap1 = 0x8F8;
-    nds_cart_state.normal_gap2 = 0x18;
-    nds_cart_state.key1_gap2 = 0x18;
+    ctrl->state = NDS_CART_UNINITIALIZED;
+    ctrl->normal_gap_clk = false;
+    ctrl->key1_gap_clk = false;
+    ctrl->normal_clk_rate = false;
+    ctrl->key1_clk_rate = false;
+    ctrl->nds = true;
+    ctrl->dsi = false;
+    ctrl->has_secure_area = true;
+    ctrl->normal_gap1 = 0x8F8;
+    ctrl->key1_gap1 = 0x8F8;
+    ctrl->normal_gap2 = 0x18;
+    ctrl->key1_gap2 = 0x18;
 }
 
 static void key1_encrypt_64bit(const s_blowfish_t *pBuf, uint32_t *data)
@@ -908,7 +910,7 @@ s_key2 key2_xcrypt(s_key2 key2, uint8_t *data, size_t len)
     return key;
 }
 
-uint64_t key2_encrypt_cmd(s_nds_cart_config * cfg, uint64_t cmd)
+uint64_t key2_encrypt_cmd(s_nds_cart_config * ctrl, uint64_t cmd)
 {
     uint8_t cmd_data[8];
 
@@ -919,7 +921,7 @@ uint64_t key2_encrypt_cmd(s_nds_cart_config * cfg, uint64_t cmd)
         cmd <<= 8;
     }
 
-    cfg->key2 = key2_xcrypt(cfg->key2, cmd_data, sizeof(cmd_data));
+    ctrl->key2 = key2_xcrypt(ctrl->key2, cmd_data, sizeof(cmd_data));
 
     cmd = 0;
 #pragma GCC unroll 8
