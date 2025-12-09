@@ -8,6 +8,7 @@ extern "C" {
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "stdbool.h"
 
 extern unsigned char nds_cart_key[];
 extern unsigned char dsi_cart_key[];
@@ -62,6 +63,12 @@ typedef struct s_nds_chip_id
 } s_nds_chip_id;
 
 static_assert(sizeof(s_nds_chip_id) == 4, "nds_chip_id must be of size 4");
+
+typedef struct
+{
+    uint32_t P[16 + 2];
+    uint32_t S[4][256];
+} s_blowfish_t;
 
 typedef struct s_key2
 {

@@ -190,26 +190,6 @@ uint64_t bitrev_64(uint64_t x)
     return result;
 }
 
-GLOBAL_STATUS print_keybuf(const char *pMsg, s_blowfish_t *pKeyBuf)
-{
-    GLOBAL_STATUS status = ERROR_STATE_NONE;
-
-    const uint8_t *keybuf = (const uint8_t *) pKeyBuf;
-
-    uart_printf("%s:\r\n", pMsg);
-
-    for (size_t i = 0; i < sizeof(s_blowfish_t); i++)
-    {
-        uart_printf(" %02x", keybuf[i]);
-    }
-
-    CHECK_GLOBAL_STATUS(uart_printf("\r\n"));
-
-    status = ERROR_STATE_OK;
-EXIT:
-    return status;
-}
-
 void __assert_func(const char *file, int line, const char *func, const char *failedexpr)
 {
     uart_printf("ASSERTION FAILED:\n  EXPR: %s\n  FILE: %s\n  FUNC: %s\n  LINE: %d", failedexpr,

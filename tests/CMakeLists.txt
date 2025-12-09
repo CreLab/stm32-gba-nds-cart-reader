@@ -7,6 +7,7 @@ set(USB_LIB_SRC
         ${CMAKE_SOURCE_DIR}/src/nds_cart.c
         ${CMAKE_SOURCE_DIR}/src/usart.c
         ${CMAKE_SOURCE_DIR}/src/util.c
+        ${CMAKE_SOURCE_DIR}/src/print.c
         ${CMAKE_SOURCE_DIR}/src/usbd/host_interface.c
         ${CMAKE_SOURCE_DIR}/src/usbd/usb_device.c
         ${CMAKE_SOURCE_DIR}/src/usbd/usbd_cdc_if.c

@@ -49,12 +49,6 @@ __attribute__((always_inline)) static inline void WAIT(size_t x)
     //        );
 }
 
-typedef struct
-{
-    uint32_t P[16 + 2];
-    uint32_t S[4][256];
-} s_blowfish_t;
-
 GLOBAL_STATUS usb_send_data(const void *data, uint16_t len);
 GLOBAL_STATUS usb_print_bytes(const void *data, uint16_t len);
 GLOBAL_STATUS usb_printf(const char *msg, ...);
@@ -62,8 +56,6 @@ GLOBAL_STATUS usb_printf(const char *msg, ...);
 GLOBAL_STATUS uart_send_data(const void *data, uint16_t len);
 GLOBAL_STATUS uart_print_bytes(const void *data, uint16_t len);
 GLOBAL_STATUS uart_printf(const char *msg, ...);
-
-GLOBAL_STATUS print_keybuf(const char *pMsg, s_blowfish_t *pKeyBuf);
 
 const char *itox8(uint8_t x);
 const char *itox32(uint32_t x);

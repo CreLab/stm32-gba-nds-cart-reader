@@ -6,6 +6,7 @@
 #include "nds_cart.h"
 #include "util.h"
 #include "gpios.h"
+#include "print.h"
 
 #define NDS_PAGE_SIZE 0x1000
 #define NDS_CHUNK_SIZE 0x200
@@ -19,13 +20,6 @@ __attribute__((always_inline)) static inline void wait_cycles(size_t cycles)
     {
         __asm__ volatile("nop");
     }
-}
-
-static void print_chip_id(const s_nds_chip_id *id)
-{
-    uint8_t bid[4];
-    memcpy(bid, id, 4);
-    uart_printf("chip_id: %02x %02x %02x %02x\r\n", bid[0], bid[1], bid[2], bid[3]);
 }
 
 __attribute__((always_inline)) static inline uint8_t data_in_cycle(size_t cycles)
@@ -73,7 +67,7 @@ enum nds_proto_rev
     NDS_PROTO_REV_1TROM_NAND,
 };
 
-s_nds_cart_config nds_cart_state;
+s_nds_cart_config nds_cart_state = {0};
 
 static s_blowfish_t blowfish_buf = {0};
 
@@ -82,7 +76,6 @@ static void nds_cart_cmd_main_data_read(uint8_t *data, uint32_t addr);
 static void nds_cart_cmd_enable_key1_nds(void);
 static void nds_cart_cmd_enable_key2(void);
 static void nds_cart_cmd_chip_id_key1(s_nds_chip_id *chip_id);
-// static void nds_cart_cmd_invalid(uint8_t *data, size_t len);
 static void nds_cart_cmd_get_secure_area(uint8_t *data, size_t page);
 static void nds_cart_cmd_chip_id_key2(s_nds_chip_id *chip_id);
 static void nds_cart_cmd_enable_data_mode(void);
@@ -94,8 +87,8 @@ static void nds_cart_read_secure_area_page(uint8_t *data, size_t page);
 static void nds_cart_reset(void);
 
 static void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, bool dsi);
-static void key1_encrypt_64bit(uint32_t *data);
-static void key1_decrypt_64bit(uint32_t *data);
+static void key1_encrypt_64bit(const s_blowfish_t *pBuf, uint32_t *data);
+static void key1_decrypt_64bit(const s_blowfish_t *pBuf, uint32_t *data);
 
 static void nds_cart_begin_key1(void)
 {
@@ -106,7 +99,7 @@ static void nds_cart_begin_key1(void)
                                        nds_cart_state.secure_area_disable[1]};
 
     key1_init_keycode(nds_cart_state.game_code, 1, 8, false);
-    key1_decrypt_64bit(secure_area_disable);
+    key1_decrypt_64bit(&blowfish_buf, secure_area_disable);
     key1_init_keycode(nds_cart_state.game_code, 2, 8, false);
 
     nds_cart_cmd_enable_key1_nds();
@@ -691,11 +684,11 @@ static void nds_cart_read_secure_area_page(uint8_t *data, size_t page)
 
     if (page == 4)
     {
-        key1_decrypt_64bit(&secure_area_page._u32[0]);
+        key1_decrypt_64bit(&blowfish_buf, &secure_area_page._u32[0]);
         key1_init_keycode(nds_cart_state.game_code, 3, 8, false);
         const size_t SEC_AREA_KEY1_CRYPT_LEN = 0x800;
         for (size_t i = 0; i < SEC_AREA_KEY1_CRYPT_LEN / sizeof(uint32_t); i += 2)
-            key1_decrypt_64bit(&secure_area_page._u32[i]);
+            key1_decrypt_64bit(&blowfish_buf, &secure_area_page._u32[i]);
 
         if (memcmp(secure_area_page._u8, "encryObj", 8))
         {
@@ -736,44 +729,44 @@ static void nds_cart_reset(void)
     nds_cart_state.key1_gap2 = 0x18;
 }
 
-static void key1_encrypt_64bit(uint32_t *data)
+static void key1_encrypt_64bit(const s_blowfish_t *pBuf, uint32_t *data)
 {
     uint32_t y = data[0];
     uint32_t x = data[1];
 
     for (int i = 0; i <= 15; i++)
     {
-        uint32_t z = blowfish_buf.P[i] ^ x;
-        x = blowfish_buf.S[0][(z >> 24) & 0xFF];
-        x = blowfish_buf.S[1][(z >> 16) & 0xFF] + x;
-        x = blowfish_buf.S[2][(z >> 8) & 0xFF] ^ x;
-        x = blowfish_buf.S[3][(z >> 0) & 0xFF] + x;
+        uint32_t z = pBuf->P[i] ^ x;
+        x = pBuf->S[0][(z >> 24) & 0xFF];
+        x = pBuf->S[1][(z >> 16) & 0xFF] + x;
+        x = pBuf->S[2][(z >> 8) & 0xFF] ^ x;
+        x = pBuf->S[3][(z >> 0) & 0xFF] + x;
         x = y ^ x;
         y = z;
     }
 
-    data[0] = x ^ blowfish_buf.P[16];
-    data[1] = y ^ blowfish_buf.P[17];
+    data[0] = x ^ pBuf->P[16];
+    data[1] = y ^ pBuf->P[17];
 }
 
-static void key1_decrypt_64bit(uint32_t *data)
+static void key1_decrypt_64bit(const s_blowfish_t *pBuf, uint32_t *data)
 {
     uint32_t y = data[0];
     uint32_t x = data[1];
 
     for (int i = 17; i >= 2; i--)
     {
-        uint32_t z = blowfish_buf.P[i] ^ x;
-        x = blowfish_buf.S[0][(z >> 24) & 0xFF];
-        x = blowfish_buf.S[1][(z >> 16) & 0xFF] + x;
-        x = blowfish_buf.S[2][(z >> 8) & 0xFF] ^ x;
-        x = blowfish_buf.S[3][(z >> 0) & 0xFF] + x;
+        uint32_t z = pBuf->P[i] ^ x;
+        x = pBuf->S[0][(z >> 24) & 0xFF];
+        x = pBuf->S[1][(z >> 16) & 0xFF] + x;
+        x = pBuf->S[2][(z >> 8) & 0xFF] ^ x;
+        x = pBuf->S[3][(z >> 0) & 0xFF] + x;
         x = y ^ x;
         y = z;
     }
 
-    data[0] = x ^ blowfish_buf.P[1];
-    data[1] = y ^ blowfish_buf.P[0];
+    data[0] = x ^ pBuf->P[1];
+    data[1] = y ^ pBuf->P[0];
 }
 
 uint64_t key1_encrypt_cmd(uint64_t cmd)
@@ -785,7 +778,7 @@ uint64_t key1_encrypt_cmd(uint64_t cmd)
     } u;
 
     u._u64 = cmd;
-    key1_encrypt_64bit(u._u32);
+    key1_encrypt_64bit(&blowfish_buf, u._u32);
     return u._u64;
 }
 
@@ -798,7 +791,7 @@ uint64_t key1_decrypt_cmd(uint64_t cmd)
     } u;
 
     u._u64 = cmd;
-    key1_decrypt_64bit(u._u32);
+    key1_decrypt_64bit(&blowfish_buf, u._u32);
     return u._u64;
 }
 
@@ -807,8 +800,8 @@ static void key1_apply_keycode(uint32_t *keycode, uint32_t modulo)
     uint32_t scratch[2];
     scratch[0] = scratch[1] = 0;
 
-    key1_encrypt_64bit(&keycode[1]);
-    key1_encrypt_64bit(&keycode[0]);
+    key1_encrypt_64bit(&blowfish_buf, &keycode[1]);
+    key1_encrypt_64bit(&blowfish_buf, &keycode[0]);
 
     for (uint32_t i = 0; i < 18; i++)
     {
@@ -817,7 +810,7 @@ static void key1_apply_keycode(uint32_t *keycode, uint32_t modulo)
 
     for (uint32_t i = 0; i < 18; i += 2)
     {
-        key1_encrypt_64bit(scratch);
+        key1_encrypt_64bit(&blowfish_buf, scratch);
         blowfish_buf.P[i + 0] = scratch[1];
         blowfish_buf.P[i + 1] = scratch[0];
     }
@@ -826,7 +819,7 @@ static void key1_apply_keycode(uint32_t *keycode, uint32_t modulo)
     {
         for (uint32_t j = 0; j < 256; j += 2)
         {
-            key1_encrypt_64bit(scratch);
+            key1_encrypt_64bit(&blowfish_buf, scratch);
             blowfish_buf.S[i][j + 0] = scratch[1];
             blowfish_buf.S[i][j + 1] = scratch[0];
         }
