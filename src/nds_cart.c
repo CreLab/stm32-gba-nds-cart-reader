@@ -231,11 +231,7 @@ void nds_cart_exec_command(s_nds_cart_config* cfg, uint64_t org_cmd, uint8_t *da
         }
     }
 
-    const uint8_t cmd_data[8] = {
-            (uint8_t) (cmd >> 56), (uint8_t) (cmd >> 48), (uint8_t) (cmd >> 40),
-            (uint8_t) (cmd >> 32), (uint8_t) (cmd >> 24), (uint8_t) (cmd >> 16),
-            (uint8_t) (cmd >> 8),  (uint8_t) (cmd >> 0),
-    };
+    uint8_t *cmd_data = (uint8_t *) &cmd;
 
     if (clk_rate == NDS_CART_CLK_6P7_MHZ)
     {
@@ -259,75 +255,95 @@ void nds_cart_exec_command(s_nds_cart_config* cfg, uint64_t org_cmd, uint8_t *da
         if (clk_rate == NDS_CART_CLK_6P7_MHZ)
         {
             for (size_t i = 0; i < gap1; i++)
-                (void) data_in_cycle_67();
+            {
+                data_in_cycle_67();
+            }
         }
         else
         {
             for (size_t i = 0; i < gap1; i++)
-                (void) data_in_cycle_42();
+            {
+                data_in_cycle_42();
+            }
         }
 
         if (key2_result)
+        {
             cfg->key2 = key2_xcrypt(cfg->key2, NULL, gap1);
+        }
     }
     else
     {
         WAIT(gap1 * 12);
     }
 
-    if (len == 0)
-        goto cmdend;
-
-    while (true)
+    if (len != 0)
     {
-        size_t block_size = len;
-        if (block_size > NDS_CHUNK_SIZE)
-            block_size = NDS_CHUNK_SIZE;
-
-        if (clk_rate == NDS_CART_CLK_6P7_MHZ)
+        while (true)
         {
-            for (size_t i = 0; i < block_size; i++)
-                data[i] = data_in_cycle_67();
-        }
-        else
-        {
-            for (size_t i = 0; i < block_size; i++)
-                data[i] = data_in_cycle_42();
-        }
+            size_t block_size = len;
+            if (block_size > NDS_CHUNK_SIZE)
+            {
+                block_size = NDS_CHUNK_SIZE;
+            }
 
-        if (key2_result)
-            cfg->key2 = key2_xcrypt(cfg->key2, data, block_size);
-
-        data += block_size;
-        len -= block_size;
-
-        if (len == 0)
-            break;
-
-        if (gap_clk)
-        {
             if (clk_rate == NDS_CART_CLK_6P7_MHZ)
             {
-                for (size_t i = 0; i < gap2; i++)
-                    (void) data_in_cycle_67();
+                for (size_t i = 0; i < block_size; i++)
+                {
+                    data[i] = data_in_cycle_67();
+                }
             }
             else
             {
-                for (size_t i = 0; i < gap2; i++)
-                    (void) data_in_cycle_42();
+                for (size_t i = 0; i < block_size; i++)
+                {
+                    data[i] = data_in_cycle_42();
+                }
             }
 
             if (key2_result)
-                cfg->key2 = key2_xcrypt(cfg->key2, NULL, gap2);
-        }
-        else
-        {
-            WAIT(gap2 * 12);
+            {
+                cfg->key2 = key2_xcrypt(cfg->key2, data, block_size);
+            }
+
+            data += block_size;
+            len -= block_size;
+
+            if (len == 0)
+            {
+                break;
+            }
+
+            if (gap_clk)
+            {
+                if (clk_rate == NDS_CART_CLK_6P7_MHZ)
+                {
+                    for (size_t i = 0; i < gap2; i++)
+                    {
+                        data_in_cycle_67();
+                    }
+                }
+                else
+                {
+                    for (size_t i = 0; i < gap2; i++)
+                    {
+                        data_in_cycle_42();
+                    }
+                }
+
+                if (key2_result)
+                {
+                    cfg->key2 = key2_xcrypt(cfg->key2, NULL, gap2);
+                }
+            }
+            else
+            {
+                WAIT(gap2 * 12);
+            }
         }
     }
 
-
-cmdend:
     data_dir_input();
     romcs_high();
     WAIT(10);
