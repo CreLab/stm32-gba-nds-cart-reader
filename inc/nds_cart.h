@@ -186,14 +186,15 @@ void nds_cart_init(void);
 
 void nds_cart_exec_command(s_nds_cart_config* ctrl, uint64_t org_cmd, uint8_t *data, size_t len);
 
-void nds_cart_cmd_chip_id(uint8_t data[4]); // returned bytes; 4
-void nds_cart_rom_read(size_t byte_addr, uint8_t *data, size_t len);
-bool nds_cart_rom_init(void);
+void nds_cart_cmd_chip_id(s_nds_cart_config *ctrl, uint8_t data[4]); // returned bytes; 4
+void nds_cart_rom_read(s_nds_cart_config *ctrl, size_t byte_addr, uint8_t *data, size_t len);
+
+bool nds_cart_rom_init(s_nds_cart_config *ctrl);
 
 uint64_t key1_encrypt_cmd(uint64_t cmd);
 uint64_t key1_decrypt_cmd(uint64_t cmd);
 
-s_key2 key2_init(bool hw_reset);
+s_key2 key2_init(s_nds_cart_config *ctrl, bool hw_reset);
 s_key2 key2_xcrypt(s_key2 key2, uint8_t *data, size_t len);
 uint64_t key2_encrypt_cmd(s_nds_cart_config* ctrl, uint64_t cmd);
 

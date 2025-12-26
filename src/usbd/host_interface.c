@@ -20,6 +20,8 @@ static volatile bool request_b_available = false;
 static uint8_t reply_buffer[REPL_BUF_SIZE];
 static struct device_reply *const reply = (struct device_reply *) reply_buffer;
 
+static s_nds_cart_config nds_cart_state = {0};
+
 struct
 {
     size_t rom_word_addr;
@@ -326,19 +328,19 @@ static GLOBAL_STATUS hostif_handle_request(struct host_request *const rq,
                 uint16_t len = (uint16_t) (rq->data[0] | (rq->data[1] << 8));
                 if (len > XFER_MAX_PAYLOAD_SIZE)
                     len = XFER_MAX_PAYLOAD_SIZE;
-                nds_cart_rom_read(nds.rom_byte_addr, rp->data, len);
+                nds_cart_rom_read(&nds_cart_state, nds.rom_byte_addr, rp->data, len);
                 nds.rom_byte_addr += len;
                 rp->type = DEV_REPL_NDS_ROM_READ;
                 rp->len = len;
             }
             break;
         case HOST_REQ_NDS_ROM_CHIPID:
-            nds_cart_cmd_chip_id(rp->data);
+            nds_cart_cmd_chip_id(&nds_cart_state, rp->data);
             rp->type = DEV_REPL_NDS_ROM_CHIPID;
             rp->len = 4;
             break;
         case HOST_REQ_NDS_ROM_INIT:
-            if (nds_cart_rom_init())
+            if (nds_cart_rom_init(&nds_cart_state))
             {
                 rp->type = DEV_REPL_NDS_ROM_INIT;
                 rp->len = 0;

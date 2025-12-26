@@ -125,7 +125,35 @@ namespace CartridgeReader
         std::vector<bool> currentHwReset{true, false};
 
         auto functionConverter = [](bool hwReset){
-            return key2_init(hwReset);
+            s_nds_cart_config cfg = {
+                    .state = NDS_CART_KEY1,
+                    .normal_gap_clk = false,
+                    .key1_gap_clk = false,
+                    .normal_clk_rate = NDS_CART_CLK_6P7_MHZ,
+                    .key1_clk_rate = NDS_CART_CLK_6P7_MHZ,
+                    .nds = false,
+                    .dsi = false,
+                    .has_secure_area = false,
+                    .protocol_rev = false,
+                    .normal_gap2 = 0x18,
+                    .key1_gap2 = 0x18,
+                    .normal_gap1 = 0x8F8,
+                    .key1_gap1 = 0x8F8,
+                    .key1_delay_ms = 0,
+                    .game_code = 0,
+                    .secure_area_disable = {0},
+                    .seed_byte = 0,
+                    .chip_id = {.nand = 0, .cart_protocol = 0},
+                    .kkkkk = 0,
+                    .iii = 0,
+                    .jjj = 0,
+                    .llll = 0,
+                    .mmm = 0,
+                    .nnn = 0,
+                    .key2 = {0x15631934, 0x02DF76D0}
+            };
+
+            return key2_init(&cfg, hwReset);
         };
 
         ApprovalTests::CombinationApprovals::verifyAllCombinations(
