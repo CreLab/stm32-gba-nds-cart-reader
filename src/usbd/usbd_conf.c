@@ -396,3 +396,8 @@ USBD_StatusTypeDef USBD_Get_USB_Status(HAL_StatusTypeDef hal_status)
     }
     return usb_status;
 }
+
+PCD_HandleTypeDef* USBD_Get_PCD_Handle(void)
+{
+    return &hpcd_USB_FS;
+}

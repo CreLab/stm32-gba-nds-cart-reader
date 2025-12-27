@@ -135,10 +135,8 @@ static void nds_cart_begin_key2(s_nds_cart_config *ctrl)
     }
 }
 
-void nds_cart_init(void)
+void nds_cart_init(s_nds_cart_config *ctrl)
 {
-    static s_nds_cart_config ctrl = {0};
-
     data_dir_input();
     clk_high();
     romcs_high();
@@ -146,7 +144,7 @@ void nds_cart_init(void)
     eepromcs_high();
     MODIFY_REG(GPIOC->CRH, 0xFFFFu, 0x1111u);
 
-    nds_cart_reset(&ctrl);
+    nds_cart_reset(ctrl);
 }
 
 static void nds_cart_change_state(s_nds_cart_config *ctrl, uint8_t state)

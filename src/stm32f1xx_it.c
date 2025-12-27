@@ -30,10 +30,9 @@
   *
   ******************************************************************************
   */
-#include "main.h"
 #include "stm32f1xx_it.h"
-
-extern PCD_HandleTypeDef hpcd_USB_FS;
+#include "usbd_conf.h"
+#include "util.h"
 
 void NMI_Handler(void)
 {
@@ -44,7 +43,7 @@ void HardFault_Handler(void)
 {
   while (1)
   {
-
+      DBG_PERIOD_SIGNAL_RX(100);
   }
 }
 
@@ -52,7 +51,7 @@ void MemManage_Handler(void)
 {
   while (1)
   {
-
+      DBG_PERIOD_SIGNAL_RX(200);
   }
 }
 
@@ -60,7 +59,7 @@ void BusFault_Handler(void)
 {
   while (1)
   {
-
+      DBG_PERIOD_SIGNAL_RX(300);
   }
 }
 
@@ -68,7 +67,7 @@ void UsageFault_Handler(void)
 {
   while (1)
   {
-
+      DBG_PERIOD_SIGNAL_RX(400);
   }
 }
 
@@ -94,7 +93,7 @@ void SysTick_Handler(void)
 
 void USB_LP_CAN1_RX0_IRQHandler(void)
 {
-  HAL_PCD_IRQHandler(&hpcd_USB_FS);
+  HAL_PCD_IRQHandler(USBD_Get_PCD_Handle());
 }
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

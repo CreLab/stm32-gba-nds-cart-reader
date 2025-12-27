@@ -39,6 +39,12 @@ static GLOBAL_STATUS hostif_handle_request(struct host_request *const rq,
 static GLOBAL_STATUS hostif_send_reply(void);
 static void hostif_reply_err(struct device_reply *const rp, const char *msg, ...);
 
+void hostif_init(void)
+{
+    gba_cart_init();
+    nds_cart_init(&nds_cart_state);
+}
+
 GLOBAL_STATUS hostif_run(void)
 {
     GLOBAL_STATUS status = ERROR_STATE_NONE;
@@ -427,7 +433,7 @@ GLOBAL_STATUS hostif_data_receive(const uint8_t *data, uint16_t size)
         request_receive_pos--;
         if (request_receive_pos <= 1)
         {
-            CHECK_GLOBAL_STATUS(ERROR_STATE_OK);
+            RETURN_GLOBAL_STATUS(ERROR_STATE_OK);
         }
     }
 
@@ -451,7 +457,7 @@ GLOBAL_STATUS hostif_data_receive(const uint8_t *data, uint16_t size)
         request_receive_pos = (uint16_t) (request_receive_pos - bytes_to_copy);
         request_a_available = true;
 
-        CHECK_GLOBAL_STATUS(ERROR_STATE_OK);
+        RETURN_GLOBAL_STATUS(ERROR_STATE_OK);
     }
 
     if (request_b_available == false)
@@ -463,7 +469,7 @@ GLOBAL_STATUS hostif_data_receive(const uint8_t *data, uint16_t size)
         request_receive_pos = (uint16_t) (request_receive_pos - bytes_to_copy);
         request_b_available = true;
 
-        CHECK_GLOBAL_STATUS(ERROR_STATE_OK);
+        RETURN_GLOBAL_STATUS(ERROR_STATE_OK);
     }
 
     status = ERROR_STATE_OK;

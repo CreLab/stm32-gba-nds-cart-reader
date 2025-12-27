@@ -100,6 +100,7 @@ struct device_reply
     uint8_t data[];
 };
 
+void hostif_init(void);
 GLOBAL_STATUS hostif_run(void);
 GLOBAL_STATUS hostif_data_receive(const uint8_t *data, uint16_t size);
 

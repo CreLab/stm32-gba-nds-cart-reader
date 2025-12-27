@@ -7,9 +7,8 @@ extern "C" {
 
 #include "util.h"
 
-extern UART_HandleTypeDef huart1;
-
 GLOBAL_STATUS MX_USART1_UART_Init(void);
+UART_HandleTypeDef* Get_USART1_UART_Handle(void);
 
 #ifdef __cplusplus
 }

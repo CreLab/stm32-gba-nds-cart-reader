@@ -182,7 +182,7 @@ typedef struct s_nds_header
 
 static_assert(sizeof(s_nds_header) == 0x1000u, "wrongly sized nds_header struct");
 
-void nds_cart_init(void);
+void nds_cart_init(s_nds_cart_config *ctrl);
 
 void nds_cart_exec_command(s_nds_cart_config* ctrl, uint64_t org_cmd, uint8_t *data, size_t len);
 

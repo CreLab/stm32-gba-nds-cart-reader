@@ -47,6 +47,7 @@ extern "C" {
 
 void *USBD_static_malloc(uint32_t size);
 void USBD_static_free(void *p);
+PCD_HandleTypeDef* USBD_Get_PCD_Handle(void);
 
 #if (USBD_DEBUG_LEVEL > 0)
 #define USBD_UsrLog(...)                                                                           \

@@ -13,6 +13,8 @@ GLOBAL_STATUS usb_send_data(const void *data, uint16_t len)
 {
     GLOBAL_STATUS status = ERROR_STATE_NONE;
 
+    uint8_t *txData = (uint8_t*)data;
+
     while (len > 0)
     {
         uint16_t block_len = len;
@@ -28,13 +30,13 @@ GLOBAL_STATUS usb_send_data(const void *data, uint16_t len)
         {
         }
 
-        memcpy(UserTxBufferFS, data, block_len);
+        memcpy(UserTxBufferFS, txData, block_len);
         if (CDC_Transmit_FS(UserTxBufferFS, block_len) != USBD_OK)
         {
             CHECK_GLOBAL_STATUS(ERROR_STATE_CDC_TRANSMIT_FAIL);
         }
 
-        data = (const char *) data + block_len;
+        txData = txData + block_len;
         len = (uint16_t) (len - block_len);
     }
 
@@ -89,7 +91,7 @@ GLOBAL_STATUS uart_send_data(const void *data, uint16_t len)
 {
     GLOBAL_STATUS status = ERROR_STATE_NONE;
 
-    if (HAL_UART_Transmit(&huart1, (void *) data, len, HAL_MAX_DELAY) != HAL_OK)
+    if (HAL_UART_Transmit(Get_USART1_UART_Handle(), (void *) data, len, HAL_MAX_DELAY) != HAL_OK)
     {
         CHECK_GLOBAL_STATUS(ERROR_STATE_UART_TRANSMIT_FAIL);
     }
@@ -134,7 +136,7 @@ GLOBAL_STATUS uart_printf(const char *msg, ...)
 
     char out[256] = {0};
     int len = vsnprintf(out, sizeof(out), msg, args);
-    CHECK_GLOBAL_STATUS(usb_send_data(out, (uint16_t) len));
+    CHECK_GLOBAL_STATUS(uart_send_data(out, (uint16_t) len));
 
     va_end(args);
 

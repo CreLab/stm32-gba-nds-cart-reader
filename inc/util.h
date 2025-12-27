@@ -8,6 +8,11 @@ extern "C" {
 #include <stdint.h>
 #include "stm32f1xx_hal.h"
 
+#if 0
+    #define CPU_RUNNING_TEST
+    #define ERROR_INTERRUPT_SIGNALS
+#endif
+
 #define GLOBAL_STATUS e_error_state
 
 #define CHECK_GLOBAL_STATUS(ret)                                                                   \
@@ -16,6 +21,10 @@ extern "C" {
         status = ret;                                                                              \
         goto EXIT;                                                                                 \
     }
+
+#define RETURN_GLOBAL_STATUS(ret)                                                              \
+    status = ret;                                                                              \
+    goto EXIT;                                                                                 \
 
 typedef enum e_error_state
 {
@@ -56,6 +65,26 @@ GLOBAL_STATUS usb_printf(const char *msg, ...);
 GLOBAL_STATUS uart_send_data(const void *data, uint16_t len);
 GLOBAL_STATUS uart_print_bytes(const void *data, uint16_t len);
 GLOBAL_STATUS uart_printf(const char *msg, ...);
+
+#ifdef ERROR_INTERRUPT_SIGNALS
+void HAL_UART_DebugSignal(void);
+void HAL_UART_DebugSignal_RX(GPIO_PinState state);
+void HAL_UART_DebugSignal_TX(GPIO_PinState state);
+void HAL_UART_DebugPeriodSignal_RX(uint32_t time);
+void HAL_UART_DebugPeriodSignal_TX(uint32_t time);
+
+#define DBG_SIGNAL_INIT()           HAL_UART_DebugSignal()
+#define DBG_SIGNAL_RX(state)        HAL_UART_DebugSignal_RX(state)
+#define DBG_SIGNAL_TX(state)        HAL_UART_DebugSignal_TX(state)
+#define DBG_PERIOD_SIGNAL_RX(time)  HAL_UART_DebugPeriodSignal_RX(time)
+#define DBG_PERIOD_SIGNAL_TX(time)  HAL_UART_DebugPeriodSignal_TX(time)
+#else
+#define DBG_SIGNAL_INIT()
+#define DBG_SIGNAL_RX(state)
+#define DBG_SIGNAL_TX(state)
+#define DBG_PERIOD_SIGNAL_RX(time)
+#define DBG_PERIOD_SIGNAL_TX(time)
+#endif
 
 const char *itox8(uint8_t x);
 const char *itox32(uint32_t x);

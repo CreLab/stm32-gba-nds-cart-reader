@@ -1,8 +1,6 @@
 #include "util.h"
 #include "usb_device.h"
 #include "gba_cart.h"
-#include "nds_cart.h"
-#include "usbd_cdc_if.h"
 #include "host_interface.h"
 #include "usart.h"
 
@@ -10,9 +8,20 @@ GLOBAL_STATUS SystemClock_Config(void);
 
 int main(void)
 {
+    uint32_t cnt = 0;
+
     HAL_Init();
 
     SystemClock_Config();
+
+#ifdef CPU_RUNNING_TEST
+    DBG_SIGNAL_INIT();
+
+    while (1)
+    {
+        DBG_PERIOD_SIGNAL_TX(500);
+    }
+#else
 
     MX_USB_DEVICE_Init();
     MX_USART1_UART_Init();
@@ -26,16 +35,21 @@ int main(void)
 
     __HAL_AFIO_REMAP_SWJ_DISABLE();
 
-    gba_cart_init();
-    nds_cart_init();
-
-    HAL_Delay(1000);
-
+    hostif_init();
     uart_printf("starting loop\r\n");
 
-    while (1) {
+    while (1)
+    {
         hostif_run();
+        cnt++;
+
+        if (cnt >= HAL_RCC_GetSysClockFreq())
+        {
+            uart_printf("Still alive\r\n");
+            cnt = 0;
+        }
     }
+#endif
 }
 
 GLOBAL_STATUS SystemClock_Config(void)

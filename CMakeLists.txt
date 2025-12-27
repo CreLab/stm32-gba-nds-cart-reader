@@ -58,11 +58,13 @@ else ()
         ${CMAKE_SOURCE_DIR}/src/print.c
         ${CMAKE_SOURCE_DIR}/src/gpios.c
         ${CMAKE_SOURCE_DIR}/src/main.c
+        ${CMAKE_SOURCE_DIR}/src/stm32f1xx_it.c
         ${CMAKE_SOURCE_DIR}/src/usbd/host_interface.c
         ${CMAKE_SOURCE_DIR}/src/usbd/usb_device.c
         ${CMAKE_SOURCE_DIR}/src/usbd/usbd_cdc_if.c
         ${CMAKE_SOURCE_DIR}/src/usbd/usbd_conf.c
         ${CMAKE_SOURCE_DIR}/src/usbd/usbd_desc.c
+        ${CMAKE_SOURCE_DIR}/startup_stm32f103xe.s
     )
 
     add_executable(${CMAKE_PROJECT_NAME})
