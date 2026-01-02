@@ -1,6 +1,7 @@
 .idea
 bios
 build
+boot/build
 patch
 doc/GBATEK-GBA_NDS_Technical_Info.md
 doc/GBATEK-GBA_NDS_Technical_Info.html

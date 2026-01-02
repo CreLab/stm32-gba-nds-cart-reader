@@ -28,9 +28,8 @@ set(CMAKE_C_FLAGS "${COMMON_FLAGS} -std=c11")
 set(CMAKE_CXX_FLAGS "${COMMON_FLAGS} -std=c++17")
 set(CMAKE_ASM_FLAGS "${COMMON_FLAGS} -c")
 
-set(LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/STM32F103RCTx_FLASH.ld")
 set(LINKER_MEM_USAGE "-Wl,--start-group -lc -lm -Wl,--end-group -Wl,--print-memory-usage")
-set(CMAKE_EXE_LINKER_FLAGS "${COMMON_FLAGS} -Wl,--gc-sections,-Map=${PROJECT_NAME}.map,-cref --specs=nosys.specs -T ${LINKER_SCRIPT} ${LINKER_MEM_USAGE}" )
+set(CMAKE_EXE_LINKER_FLAGS "${COMMON_FLAGS} -Wl,--gc-sections,-Map=${PROJECT_NAME}.map,-cref --specs=nosys.specs ${LINKER_MEM_USAGE} " )
 
 # Debug/Release-spezifische Flags
 set(C_FLAGS_DEBUG "-O0 -g3")

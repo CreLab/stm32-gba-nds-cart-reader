@@ -10,6 +10,16 @@ add_custom_command(
 
 add_custom_target(run_script ALL DEPENDS ${CMAKE_SOURCE_DIR}/src/nds_cart_key.c)
 
+execute_process(
+        COMMAND git describe --abbrev=8 --dirty --always --tags
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_VERSION
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+add_compile_definitions(VERSION="${GIT_VERSION}")
+message(STATUS "Git Version: ${GIT_VERSION}")
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
@@ -18,14 +28,19 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif ()
 
-set(CMAKE_PROJECT_NAME nintendo-cartridge-reader)
-set(CMAKE_PROJECT_INTERFACE cartridge-reader-interface)
-
 if (NOT ENABLE_UNIT_TESTS)
     include("cmake/gcc-arm-none-eabi.cmake")
 endif ()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
+
+if (ENABLE_BOOT_LOADER)
+    set(CMAKE_PROJECT_NAME dfu-bootloader)
+else ()
+    set(CMAKE_PROJECT_NAME nintendo-cartridge-reader)
+endif ()
+
+set(CMAKE_PROJECT_INTERFACE ${CMAKE_PROJECT_NAME}-interface)
 
 project(${CMAKE_PROJECT_NAME})
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
@@ -35,10 +50,10 @@ enable_language(C ASM)
 add_subdirectory(lib/stm32_lib)
 add_subdirectory(lib/usbd_lib)
 
-add_library(${CMAKE_PROJECT_INTERFACE} INTERFACE)
-target_include_directories(${CMAKE_PROJECT_INTERFACE} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_CURRENT_SOURCE_DIR}/inc/usbd)
-
 if (ENABLE_UNIT_TESTS)
+    add_library(${CMAKE_PROJECT_INTERFACE} INTERFACE)
+    target_include_directories(${CMAKE_PROJECT_INTERFACE} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_CURRENT_SOURCE_DIR}/inc/usbd)
+
     enable_language(CXX)
     add_compile_options(-fdata-sections -ffunction-sections)
 
@@ -48,29 +63,35 @@ if (ENABLE_UNIT_TESTS)
     set(XML_ENDIANNESS "LITTLE")
 
     add_subdirectory(tests)
+elseif (ENABLE_BOOT_LOADER)
+    add_subdirectory(boot)
 else ()
+    add_library(${CMAKE_PROJECT_INTERFACE} INTERFACE)
+    target_include_directories(${CMAKE_PROJECT_INTERFACE} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_CURRENT_SOURCE_DIR}/inc/usbd)
+
     set(CMAKE_PROJECT_SRC
-        ${CMAKE_SOURCE_DIR}/src/gba_cart.c
-        ${CMAKE_SOURCE_DIR}/src/nds_cart.c
-        ${CMAKE_SOURCE_DIR}/src/nds_cart_key.c
-        ${CMAKE_SOURCE_DIR}/src/usart.c
-        ${CMAKE_SOURCE_DIR}/src/util.c
-        ${CMAKE_SOURCE_DIR}/src/print.c
-        ${CMAKE_SOURCE_DIR}/src/gpios.c
-        ${CMAKE_SOURCE_DIR}/src/main.c
-        ${CMAKE_SOURCE_DIR}/src/stm32f1xx_it.c
-        ${CMAKE_SOURCE_DIR}/src/usbd/host_interface.c
-        ${CMAKE_SOURCE_DIR}/src/usbd/usb_device.c
-        ${CMAKE_SOURCE_DIR}/src/usbd/usbd_cdc_if.c
-        ${CMAKE_SOURCE_DIR}/src/usbd/usbd_conf.c
-        ${CMAKE_SOURCE_DIR}/src/usbd/usbd_desc.c
-        ${CMAKE_SOURCE_DIR}/startup_stm32f103xe.s
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/gba_cart.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/nds_cart.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/nds_cart_key.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/usart.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/print.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/gpios.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/stm32f1xx_it.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/usbd/host_interface.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/usbd/usb_device.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/usbd/usbd_cdc_if.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/usbd/usbd_conf.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/usbd/usbd_desc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/startup_stm32f103xe.s
     )
 
     add_executable(${CMAKE_PROJECT_NAME})
     target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_PROJECT_SRC})
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_PROJECT_INTERFACE} stm32_lib usbd_lib usbd_lib_interface)
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.map)
+    target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "-T${CMAKE_SOURCE_DIR}/STM32F103RCTx_FLASH.ld")
     add_dependencies(${CMAKE_PROJECT_NAME} run_script)
 
     add_custom_command(
@@ -78,5 +99,11 @@ else ()
             COMMAND ${CMAKE_OBJCOPY} -O ihex ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.hex
             COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.bin
             COMMENT "Create ${CMAKE_PROJECT_NAME}.hex and ${CMAKE_PROJECT_NAME}.bin"
+    )
+
+    add_custom_target(dfu_app_flash
+            COMMAND ${CMAKE_SOURCE_DIR}/scripts/dfu_app_flash.bat ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.bin
+            DEPENDS ${CMAKE_PROJECT_NAME}
+            COMMENT "Flashing firmware via DFU (Windows)"
     )
 endif ()

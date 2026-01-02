@@ -39,10 +39,12 @@ _Min_Heap_Size = 0x1000;    /* required amount of heap  */
 _Min_Stack_Size = 0x4000;    /* required amount of stack */
 
 /* Specify the memory areas */
+/* DFU_BOOT    : ORIGIN = 0x08000000, LENGTH = 4K */
 MEMORY
 {
-RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 48K
-FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 256K
+/* Reserve the last 8 bytes of RAM to save info across reboots */
+RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 49152 - 8
+FLASH (rx)     : ORIGIN = 0x08001000, LENGTH = 252K
 }
 
 /* Define output sections */

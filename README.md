@@ -6,6 +6,8 @@ built upon the original hardware design by ipatix. The corresponding PCB files a
 documentation can be found in the related repository:
 [ipatix/stm32-gba-nds-cart-reader-pcb](https://github.com/ipatix/stm32-gba-nds-cart-reader-pcb).
 
+---
+
 ## Refactoring Overview
 
 The original codebase has undergone a comprehensive refactoring process:
@@ -15,6 +17,8 @@ The original codebase has undergone a comprehensive refactoring process:
   performance and clarity.
 - The result is a cleaner, more modular codebase that retains full compatibility with the original
   hardware.
+
+---
 
 ## Documentation
 
@@ -35,11 +39,15 @@ Please note:
 - To fetch a newer version of the documentation, you can run the included script:
   `update_gbatek_docu.sh`.
 
+---
+
 ## Purpose
 
 This project aims to provide a streamlined and maintainable software interface for reading data from
 Nintendo cartridges using STM32 microcontrollers. It is ideal for developers, modders and hardware
 enthusiasts who want to interact with GBA/NDS/DSi/3DS cartridges at a low level.
+
+---
 
 ## Repository Structure
 
@@ -56,25 +64,47 @@ enthusiasts who want to interact with GBA/NDS/DSi/3DS cartridges at a low level.
 └── README.txt       # This file
 ```
 
+---
+
 ## Requirements
 
 - STM32 microcontroller (compatible with ipatix's PCB design)
 - UART interface for flashing firmware
 - Cartridge headers (GBA/NDS) – may require sourcing from third-party vendors
 
+---
+
 ## Getting Started
 
+### CMake
 1. Clone the repository.
-2. Flash the firmware to your STM32 using `stm32flash` and the serial interface.
-3. Connect your cartridge and begin communication using the provided software tools.
+2. Build CMake inside IDE (**CLion**) 
+
+### DFU Bootloader
+1. Build dfu_bootloader
+2. Connect the device via UART header pins
+3. Open STM32CubeProgrammer software connect via UART
+4. Flash dfu_bootloader to start address 0x08000000
+5. Reset device to boot into dfu_bootloader firmware
+
+### STM32 GBA/NDS Cartridge Reader
+1. Enter DFU mode (depending on your hardware trigger)
+2. Flash the application firmware using dfu_app_flash.bat script
+3. Reset device to boot into STM32 GBA/NDS Cartridge Reader firmware
+
+---
 
 ## License
 
 - Code: GNU General Public License v3.0 (see LICENSE)
 - Documentation: Creative Commons Attribution-ShareAlike 4.0 (see LICENSE_DOCS)
 
-This project is a refactored fork of ipatix/stm32-gba-nds-cart-reader. The original repository
-did not specify a license. All modifications and additions are released under the terms above.
+This project is a refactored fork of
+[ipatix/stm32-gba-nds-cart-reader](https://github.com/ipatix/stm32-gba-nds-cart-reader).
+The original repository did not specify a license. All modifications and
+additions are released under the terms above.
+
+---
 
 ## Credits
 
