@@ -169,3 +169,4 @@ SECTIONS
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }
 
+PROVIDE(_dfu_boot_mode = ORIGIN(RAM) + LENGTH(RAM));

@@ -9,6 +9,10 @@
 #define NUM_ITOX8 16
 #define NUM_ITOX32 4
 
+#define BOOT_MAGIC_VALUE  ((uint64_t)0xDEADBEEFCC00FFEEULL)
+
+extern uint8_t _dfu_boot_mode;
+
 GLOBAL_STATUS usb_send_data(const void *data, uint16_t len)
 {
     GLOBAL_STATUS status = ERROR_STATE_NONE;
@@ -191,6 +195,28 @@ uint64_t bitrev_64(uint64_t x)
 
     return result;
 }
+
+void boot_into_dfu_bootloader(void)
+{
+    volatile uint64_t *boot_magic =
+            (volatile uint64_t *)&_dfu_boot_mode;
+
+    *boot_magic = BOOT_MAGIC_VALUE;
+
+    // Sicherstellen, dass der Schreibzugriff wirklich im RAM landet
+    __DSB();
+    __ISB();
+
+    // Hardware-Reset auslösen (Cortex-M)
+    NVIC_SystemReset();
+
+    // Fallback, falls aus irgendeinem Grund kein Reset passiert
+    for (;;)
+    {
+        __NOP();
+    }
+}
+
 
 void __assert_func(const char *file, int line, const char *func, const char *failedexpr)
 {

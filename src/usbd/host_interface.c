@@ -16,6 +16,7 @@ static struct host_request *const request_a = (struct host_request *) request_bu
 static struct host_request *const request_b = (struct host_request *) request_buffer_b;
 static volatile bool request_a_available = false;
 static volatile bool request_b_available = false;
+static volatile bool dfu_reboot = false;
 
 static uint8_t reply_buffer[REPL_BUF_SIZE];
 static struct device_reply *const reply = (struct device_reply *) reply_buffer;
@@ -48,6 +49,12 @@ void hostif_init(void)
 GLOBAL_STATUS hostif_run(void)
 {
     GLOBAL_STATUS status = ERROR_STATE_NONE;
+
+    if (dfu_reboot)
+    {
+        dfu_reboot = false;
+        boot_into_dfu_bootloader();
+    }
 
     if (request_a_available)
     {
@@ -358,6 +365,13 @@ static GLOBAL_STATUS hostif_handle_request(struct host_request *const rq,
                 CHECK_GLOBAL_STATUS(ERROR_STATE_ROM_NOT_INITIALIZED);
             }
             break;
+        case HOST_REQ_ENTER_DFU_MODE:
+            dfu_reboot = true;
+
+            rp->type = DEV_REPL_ENTER_DFU_MODE;
+            rp->len = 0;
+
+            break;
         default:
             hostif_reply_err(rp, "ERROR: invalid request ID: %s", itox32(rq->type));
             CHECK_GLOBAL_STATUS(ERROR_STATE_INVALID_PARAMETER);
@@ -369,6 +383,7 @@ EXIT:
     {
         status = ERROR_STATE_CDC_TRANSMIT_FAIL;
     }
+
     return status;
 }
 

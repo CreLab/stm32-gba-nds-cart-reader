@@ -91,6 +91,8 @@ const char *itox32(uint32_t x);
 
 uint64_t bitrev_64(uint64_t x);
 
+void boot_into_dfu_bootloader(void);
+
 #define ceil_div(num, den) (((num) + (den) - 1) / (den))
 
 #ifndef NDEBUG

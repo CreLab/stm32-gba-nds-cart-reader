@@ -46,6 +46,8 @@ extern "C" {
 #define HOST_REQ_NDS_ROM_CHIPID 0xB2
 #define HOST_REQ_NDS_ROM_INIT 0xB3
 
+#define HOST_REQ_ENTER_DFU_MODE 0xFF
+
 #define DEV_REPL_MAGIC 0xDE44
 
 #define DEV_REPL_ROM_SEEK 0x140
@@ -81,6 +83,8 @@ extern "C" {
 #define DEV_REPL_NDS_ROM_INIT 0x1B3
 
 #define DEV_REPL_ERR 0x1F0
+
+#define DEV_REPL_ENTER_DFU_MODE 0x4FFF
 
 struct host_request
 {

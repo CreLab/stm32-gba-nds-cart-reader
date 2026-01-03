@@ -43,6 +43,8 @@ static struct {
 	uint16_t blocknum;
 } prog;
 
+static void jumpToApplication(const uint32_t *base_addr, uint32_t imagesize);
+
 // Serial number to expose via USB
 static char serial_no[25];
 
@@ -89,10 +91,36 @@ static uint8_t usbdfu_getstatus(uint32_t *bwPollTimeout) {
 	}
 }
 
+#if 0
+#define SCB_AIRCR_VECTKEY_Pos              16U                                            /*!< SCB AIRCR: VECTKEY Position */
+
+#define SCB_AIRCR_PRIGROUP_Pos              8U                                            /*!< SCB AIRCR: PRIGROUP Position */
+#define SCB_AIRCR_PRIGROUP_Msk             (7UL << SCB_AIRCR_PRIGROUP_Pos)                /*!< SCB AIRCR: PRIGROUP Mask */
+
+#define SCB_AIRCR_SYSRESETREQ_Pos           2U                                            /*!< SCB AIRCR: SYSRESETREQ Position */
+#define SCB_AIRCR_SYSRESETREQ_Msk          (1UL << SCB_AIRCR_SYSRESETREQ_Pos)             /*!< SCB AIRCR: SYSRESETREQ Mask */
+
+#define SCB_AIRCR                 ((uint32_t*)0xE000ED0CUL)   /*!< SCB configuration struct */
+
+__attribute__((always_inline)) static inline void __DSB(void)
+{
+    __asm volatile ("dsb 0xF":::"memory");
+}
+#endif
+
 static void _full_system_reset() {
-	// Reset and wait for it!
-	volatile uint32_t *_scb_aircr = (uint32_t*)0xE000ED0CU;
-	*_scb_aircr = 0x05FA0000 | 0x4;
+#if 1
+    // Reset and wait for it!
+    volatile uint32_t *_scb_aircr = (uint32_t*)0xE000ED0CU;
+    *_scb_aircr = 0x05FA0000 | 0x4;
+#else
+    __DSB();
+
+    *SCB_AIRCR = (uint32_t)((0x5FAUL << SCB_AIRCR_VECTKEY_Pos)    |
+                             (*SCB_AIRCR & SCB_AIRCR_PRIGROUP_Msk) |
+                             SCB_AIRCR_SYSRESETREQ_Msk    );
+    __DSB();
+#endif
 	while(1);
 	__builtin_unreachable();
 }
@@ -147,10 +175,8 @@ static void usbdfu_getstatus_complete(struct usb_setup_data *req) {
 		usbdfu_state = STATE_DFU_DNLOAD_IDLE;
 		return;
 	case STATE_DFU_MANIFEST:
-		// Perform reset
-		clear_reboot_flags();
-		_full_system_reset();
-		return;
+        jumpToApplication((uint32_t *) start_addr, ((uint32_t *)start_addr)[0x20 / 4]);
+        return;
 	default:
 		return;
 	}
@@ -382,6 +408,7 @@ int main(void) {
 	// the bootloader if it's unprotected. This requires a reset.
 	// If the device was DFU-rebooted we skip this check, to allow for
 	// bootloader updates.
+#if 0
 	if (!rebooted_into_updater() && (FLASH_WRPR & 1)) {
 		// Make a copy of the opt bytes so that we only modify what we need to.
 		uint16_t opt[8];
@@ -399,10 +426,10 @@ int main(void) {
 
 		_full_system_reset();
 	}
+#endif
 
 	const uint32_t start_addr = 0x08000000 + (FLASH_BOOTLDR_SIZE_KB*1024);
-	const uint32_t * const base_addr = (uint32_t*)start_addr;
-	uint32_t imagesize = base_addr[0x20 / 4];
+	uint32_t imagesize = ((uint32_t*)start_addr)[0x20 / 4];
 
 	int go_dfu = rebooted_into_dfu() ||
 	#ifdef ENABLE_PINRST_DFU_BOOT
@@ -416,21 +443,8 @@ int main(void) {
 	if (!go_dfu &&
 	   (*(volatile uint32_t *)APP_ADDRESS & 0x2FFE0000) == 0x20000000) {
 
-		if (validate_checksum(base_addr, imagesize))
-		{
-			// Clear flags
-			clear_reboot_flags();
-
-			// Set vector table base address.
-			volatile uint32_t *_csb_vtor = (uint32_t*)0xE000ED08U;
-			*_csb_vtor = APP_ADDRESS & 0xFFFF;
-			// Initialise master stack pointer.
-			__asm__ volatile("msr msp, %0"::"g"
-					 (*(volatile uint32_t *)APP_ADDRESS));
-			// Jump to application.
-			(*(void (**)())(APP_ADDRESS + 4))();
-		}
-	}
+        jumpToApplication((uint32_t*)start_addr, imagesize);
+    }
 
 	clock_setup_in_hse_12mhz_out_72mhz();
 
@@ -454,6 +468,24 @@ int main(void) {
 		do_usb_poll();
 	}
 	__builtin_unreachable();
+}
+
+static void jumpToApplication(const uint32_t *base_addr, uint32_t imagesize)
+{
+    if (validate_checksum(base_addr, imagesize))
+    {
+        // Clear flags
+        clear_reboot_flags();
+
+        // Set vector table base address.
+        volatile uint32_t *_csb_vtor = (uint32_t*)0xE000ED08U;
+        *_csb_vtor = APP_ADDRESS & 0xFFFF;
+        // Initialise master stack pointer.
+        __asm__ volatile("msr msp, %0"::"g"
+                 (*(volatile uint32_t *)APP_ADDRESS));
+        // Jump to application.
+        (*(void (**)())(APP_ADDRESS + 4))();
+    }
 }
 
 // Implement this here to save space, quite minimalistic :D

@@ -11,6 +11,9 @@ if "%APP_BIN%"=="" (
     exit /b 1
 )
 
+echo "Reboot device to DFU mode ..."
+python.exe "%~dp0reboot_dfu_mode.py"
+
 echo "Checking for DFU device..."
 %DFU% -l
 
