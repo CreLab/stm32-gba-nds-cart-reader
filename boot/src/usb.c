@@ -110,12 +110,12 @@ void usb_init() {
 }
 
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
-#define USBD_PM_TOP 0x40
+#define USBD_PM_TOP 0x40U
 
 static void st_usbfs_copy_to_pm(volatile void *vPM, const void *buf, uint16_t len) {
 	const uint16_t *lbuf = buf;
 	volatile uint32_t *PM = vPM;
-	for (len = (len + 1) >> 1; len; len--)
+	for (len = (uint16_t)(len + 1) >> 1; len; len--)
 		*PM++ = *lbuf++;
 }
 
@@ -170,7 +170,7 @@ static void _usbd_ep_nak_set(uint8_t addr, uint8_t nak) {
 		USB_SET_EP_RX_STAT(addr, USB_EP_RX_STAT_VALID);
 }
 
-void _ep_stall_set(uint8_t addr, uint8_t stall) {
+void _ep_stall_set(uint16_t addr, uint16_t stall) {
 	if (addr == 0)
 		USB_SET_EP_TX_STAT(addr, stall ? USB_EP_TX_STAT_STALL : USB_EP_TX_STAT_NAK);
 
@@ -191,7 +191,7 @@ void _ep_stall_set(uint8_t addr, uint8_t stall) {
 	}
 }
 
-uint8_t _ep_stall_get(uint8_t addr) {
+uint8_t _ep_stall_get(uint16_t addr) {
 	if (addr & 0x80) {
 		if ((*USB_EP_REG(addr & 0x7F) & USB_EP_TX_STAT) == USB_EP_TX_STAT_STALL)
 			return 1;
@@ -262,13 +262,11 @@ static enum usbd_request_return_codes usb_standard_get_descriptor() {
 			/* Send sane Language ID descriptor... */
 			sd->wData[0] = USB_LANGID_ENGLISH_US;
 			datasize = sd->bLength = sizeof(sd->bLength) + sizeof(sd->bDescriptorType) + sizeof(sd->wData[0]);
-		#ifdef WINUSB_SUPPORT
 		} else if (descr_idx == 0xEE) {
 			const char winusbstr[] = {'M','S','F','T','1','0','0','A','\0'};
 			for (int i = 0; i < sizeof(winusbstr); i++)
 				sd->wData[i] = winusbstr[i];
 			datasize = sd->bLength = sizeof(sd->bLength) + sizeof(sd->bDescriptorType) + sizeof(winusbstr)*2;
-		#endif
 		} else {
 			array_idx = descr_idx - 1;
 
@@ -398,7 +396,6 @@ static enum usbd_request_return_codes usb_control_request_dispatch() {
 			return result;
 	}
 
-	#ifdef WINUSB_SUPPORT
 	const uint8_t wtype = USB_REQ_TYPE_VENDOR | USB_REQ_TYPE_DEVICE;
 	const uint8_t wmask = USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT;
 	if ((usb_req.bmRequestType & wmask) == wtype && usb_req.bRequest == 0x41 /* A */) {
@@ -420,7 +417,6 @@ static enum usbd_request_return_codes usb_control_request_dispatch() {
 		datasize = sizeof(winusb_desc);
 		return USBD_REQ_HANDLED;
 	}
-	#endif
 
 	/* Try standard request if not already handled. */
 	return _usbd_standard_request();
@@ -436,7 +432,7 @@ static uint8_t _needs_zlp(uint16_t len, uint16_t wLength, uint8_t ep_size) {
 }
 
 static void _usb_control_setup_read() {
-	unsigned maxdataout = usb_req.wLength;
+	uint16_t maxdataout = usb_req.wLength;
 
 	dataoff = 0; // Restart transmission counter
 	if (usb_control_request_dispatch()) {
@@ -598,7 +594,7 @@ void _usbd_ep_setup(uint8_t addr, uint8_t type, uint16_t max_size) {
 }
 
 void do_usb_poll() {
-	uint16_t istr = *USB_ISTR_REG;
+	uint16_t istr = (uint16_t)*USB_ISTR_REG;
 
 	if (istr & USB_ISTR_RESET) {
 		USB_CLR_ISTR_RESET();

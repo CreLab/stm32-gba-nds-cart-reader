@@ -5,10 +5,10 @@
 // Basic defs
 #define MMIO32(addr)       (*(volatile uint32_t *)(addr))
 #define PERIPH_BASE        (0x40000000U)
-#define PERIPH_BASE_APB1   (PERIPH_BASE + 0x00000)
-#define USB_DEV_FS_BASE    (PERIPH_BASE_APB1 + 0x5c00)
-#define USB_PMA_BASE       (PERIPH_BASE_APB1 + 0x6000)
-#define USB_VID            (0xdead)
+#define PERIPH_BASE_APB1   (PERIPH_BASE + 0x00000U)
+#define USB_DEV_FS_BASE    (PERIPH_BASE_APB1 + 0x5c00U)
+#define USB_PMA_BASE       (PERIPH_BASE_APB1 + 0x6000U)
+#define USB_VID            (0x0483)
 #define USB_PID            (0xca5d)
 
 // DFU definitions
@@ -224,7 +224,7 @@ struct usb_setup_data {
 /* USB Endpoint Descriptor bmAttributes bit definitions - Table 9-13 */
 /* bits 1..0 : transfer type */
 #define USB_ENDPOINT_ATTR_CONTROL		0x00
-#define USB_ENDPOINT_ATTR_ISOCHRONOUS		0x01
+#define USB_ENDPOINT_ATTR_ISOCHRONOUS	0x01
 #define USB_ENDPOINT_ATTR_BULK			0x02
 #define USB_ENDPOINT_ATTR_INTERRUPT		0x03
 #define USB_ENDPOINT_ATTR_TYPE		0x03
@@ -263,23 +263,23 @@ enum usb_language_id {
 /* Get masked out bit value. */
 #define GET_REG_BIT(REG, BIT)	(GET_REG(REG) & (BIT))
 
-#define USB_DADDR_EF		(1 << 7)
-#define USB_DADDR_ADDR		0x007F
+#define USB_DADDR_EF		(1 << 7U)
+#define USB_DADDR_ADDR		0x007FU
 
 
 
 /* --- USB general registers ----------------------------------------------- */
 
 /* USB Control register */
-#define USB_CNTR_REG		(&MMIO32(USB_DEV_FS_BASE + 0x40))
+#define USB_CNTR_REG		(&MMIO32(USB_DEV_FS_BASE + 0x40U))
 /* USB Interrupt status register */
-#define USB_ISTR_REG		(&MMIO32(USB_DEV_FS_BASE + 0x44))
+#define USB_ISTR_REG		(&MMIO32(USB_DEV_FS_BASE + 0x44U))
 /* USB Frame number register */
 #define USB_FNR_REG		(&MMIO32(USB_DEV_FS_BASE + 0x48))
 /* USB Device address register */
-#define USB_DADDR_REG		(&MMIO32(USB_DEV_FS_BASE + 0x4C))
+#define USB_DADDR_REG		(&MMIO32(USB_DEV_FS_BASE + 0x4CU))
 /* USB Buffer table address register */
-#define USB_BTABLE_REG		(&MMIO32(USB_DEV_FS_BASE + 0x50))
+#define USB_BTABLE_REG		(&MMIO32(USB_DEV_FS_BASE + 0x50U))
 
 /* USB EP register */
 #define USB_EP_REG(EP)		(&MMIO32(USB_DEV_FS_BASE) + (EP))
@@ -288,34 +288,34 @@ enum usb_language_id {
 /* --- USB control register masks / bits ----------------------------------- */
 
 /* Interrupt mask bits, set to 1 to enable interrupt generation */
-#define USB_CNTR_CTRM		0x8000
-#define USB_CNTR_PMAOVRM	0x4000
-#define USB_CNTR_ERRM		0x2000
-#define USB_CNTR_WKUPM		0x1000
-#define USB_CNTR_SUSPM		0x0800
-#define USB_CNTR_RESETM		0x0400
-#define USB_CNTR_SOFM		0x0200
-#define USB_CNTR_ESOFM		0x0100
+#define USB_CNTR_CTRM		0x8000U
+#define USB_CNTR_PMAOVRM	0x4000U
+#define USB_CNTR_ERRM		0x2000U
+#define USB_CNTR_WKUPM		0x1000U
+#define USB_CNTR_SUSPM		0x0800U
+#define USB_CNTR_RESETM		0x0400U
+#define USB_CNTR_SOFM		0x0200U
+#define USB_CNTR_ESOFM		0x0100U
 
 /* Request/Force bits */
-#define USB_CNTR_RESUME		0x0010 /* Resume request */
-#define USB_CNTR_FSUSP		0x0008 /* Force suspend */
-#define USB_CNTR_LP_MODE	0x0004 /* Low-power mode */
-#define USB_CNTR_PWDN		0x0002 /* Power down */
-#define USB_CNTR_FRES		0x0001 /* Force reset */
+#define USB_CNTR_RESUME		0x0010U /* Resume request */
+#define USB_CNTR_FSUSP		0x0008U /* Force suspend */
+#define USB_CNTR_LP_MODE	0x0004U /* Low-power mode */
+#define USB_CNTR_PWDN		0x0002U /* Power down */
+#define USB_CNTR_FRES		0x0001U /* Force reset */
 
 /* --- USB interrupt status register masks / bits -------------------------- */
 
-#define USB_ISTR_CTR		0x8000 /* Correct Transfer */
-#define USB_ISTR_PMAOVR		0x4000 /* Packet Memory Area Over / Underrun */
-#define USB_ISTR_ERR		0x2000 /* Error */
-#define USB_ISTR_WKUP		0x1000 /* Wake up */
-#define USB_ISTR_SUSP		0x0800 /* Suspend mode request */
-#define USB_ISTR_RESET		0x0400 /* USB RESET request */
-#define USB_ISTR_SOF		0x0200 /* Start Of Frame */
-#define USB_ISTR_ESOF		0x0100 /* Expected Start Of Frame */
-#define USB_ISTR_DIR		0x0010 /* Direction of transaction */
-#define USB_ISTR_EP_ID		0x000F /* Endpoint Identifier */
+#define USB_ISTR_CTR		0x8000U /* Correct Transfer */
+#define USB_ISTR_PMAOVR		0x4000U /* Packet Memory Area Over / Underrun */
+#define USB_ISTR_ERR		0x2000U /* Error */
+#define USB_ISTR_WKUP		0x1000U /* Wake up */
+#define USB_ISTR_SUSP		0x0800U /* Suspend mode request */
+#define USB_ISTR_RESET		0x0400U /* USB RESET request */
+#define USB_ISTR_SOF		0x0200U /* Start Of Frame */
+#define USB_ISTR_ESOF		0x0100U /* Expected Start Of Frame */
+#define USB_ISTR_DIR		0x0010U /* Direction of transaction */
+#define USB_ISTR_EP_ID		0x000FU /* Endpoint Identifier */
 
 /* --- USB interrupt status register manipulators -------------------------- */
 
@@ -381,31 +381,23 @@ enum usb_language_id {
 #define USB_EP_TYPE_ISO		0x0400
 #define USB_EP_TYPE_INTERRUPT	0x0600
 
-/* --- USB BTABLE Registers ------------------------------------------------ */
-
-#define USB_EP_TX_ADDR(EP) \
-	((uint32_t *)(USB_PMA_BASE + (USB_GET_BTABLE + EP * 8 + 0) * 2))
-
-#define USB_EP_TX_COUNT(EP) \
-	((uint32_t *)(USB_PMA_BASE + (USB_GET_BTABLE + EP * 8 + 2) * 2))
-
-#define USB_EP_RX_ADDR(EP) \
-	((uint32_t *)(USB_PMA_BASE + (USB_GET_BTABLE + EP * 8 + 4) * 2))
-
-#define USB_EP_RX_COUNT(EP) \
-	((uint32_t *)(USB_PMA_BASE + (USB_GET_BTABLE + EP * 8 + 6) * 2))
-
-/* --- USB BTABLE manipulators --------------------------------------------- */
-
-#define USB_GET_EP_TX_BUFF(EP) \
-	(USB_PMA_BASE + (uint8_t *)(USB_GET_EP_TX_ADDR(EP) * 2))
-
-#define USB_GET_EP_RX_BUFF(EP) \
-	(USB_PMA_BASE + (uint8_t *)(USB_GET_EP_RX_ADDR(EP) * 2))
-
 /* --- USB BTABLE registers ------------------------------------------------ */
 
 #define USB_GET_BTABLE		GET_REG(USB_BTABLE_REG)
+
+/* --- USB BTABLE Registers ------------------------------------------------ */
+
+#define USB_EP_TX_ADDR(EP) \
+	((uint32_t *)(USB_PMA_BASE + (USB_GET_BTABLE + EP * 8U + 0U) * 2U))
+
+#define USB_EP_TX_COUNT(EP) \
+	((uint32_t *)(USB_PMA_BASE + (USB_GET_BTABLE + EP * 8U + 2U) * 2U))
+
+#define USB_EP_RX_ADDR(EP) \
+	((uint32_t *)(USB_PMA_BASE + (USB_GET_BTABLE + EP * 8U + 4U) * 2U))
+
+#define USB_EP_RX_COUNT(EP) \
+	((uint32_t *)(USB_PMA_BASE + (USB_GET_BTABLE + EP * 8U + 6U) * 2U))
 
 /* --- USB BTABLE manipulators --------------------------------------------- */
 
@@ -430,6 +422,13 @@ enum usb_language_id {
 		(USB_EP_NTOGGLE_MSK & \
 		(~USB_EP_ADDR))) | ADDR))
 
+/* --- USB BTABLE manipulators --------------------------------------------- */
+
+#define USB_GET_EP_TX_BUFF(EP) \
+	(USB_PMA_BASE + (uint8_t *)(USB_GET_EP_TX_ADDR(EP) * 2))
+
+#define USB_GET_EP_RX_BUFF(EP) \
+	(USB_PMA_BASE + (uint8_t *)(USB_GET_EP_RX_ADDR(EP) * 2))
 
 /*
  * Set/reset a bit in a masked window by using toggle mechanism.

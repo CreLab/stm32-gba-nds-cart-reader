@@ -16,13 +16,13 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#include "flash_config.h"
 #include <string.h>
 #include <stdbool.h>
+
+#include "flash_config.h"
 #include "usb.h"
 #include "reboot.h"
 #include "flash.h"
-#include "watchdog.h"
 
 /* Commands sent with wBlockNum == 0 as per ST implementation. */
 #define CMD_SETADDR	0x21
@@ -49,32 +49,17 @@ static char serial_no[25];
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 const char * const _usb_strings[5] = {
-	"davidgf.net (libopencm3 based)", // iManufacturer
-	"DFU bootloader [" VERSION "]", // iProduct
+	"CreLab (based davidgfnet)", // iManufacturer
+	"STM32 DFU Bootloader [" VERSION "]", // iProduct
 	serial_no, // iSerialNumber
 	// Interface desc string
 	/* This string is used by ST Microelectronics' DfuSe utility. */
 	/* Change check_do_erase() accordingly */
-	"@Internal Flash /" STR(FLASH_BASE_ADDR) "/"
-	  STR(FLASH_BOOTLDR_SIZE_KB) "KB,"
-	  STR(FLASH_BOOTLDR_PAYLOAD_SIZE_KB) "KB",
+    "@Internal Flash /" STR(FLASH_BASE_ADDR) "/"
+    STR(FLASH_BOOTLDR_SIZE_KB) "*001Ka,"
+    STR(FLASH_BOOTLDR_PAYLOAD_SIZE_KB) "*001Kg",
 	// Config desc string
-	"Bootloader config: "
-	#ifdef ENABLE_WATCHDOG
-	"WtDg[" STR(ENABLE_WATCHDOG) "s] "
-	#endif
-	#ifdef ENABLE_SAFEWRITE
-	"SafeWr "
-	#endif
-	#ifdef ENABLE_WRITEPROT
-	"ROboot "
-	#endif
-	#ifdef ENABLE_PROTECTIONS
-	"RDO/DBG ROboot "
-	#endif
-	#ifdef ENABLE_CHECKSUM
-	"FW-CRC "
-	#endif
+	"Bootloader config: ROboot FW-CRC"
 };
 
 static const char hcharset[16] = "0123456789abcdef";
@@ -133,10 +118,6 @@ static void usbdfu_getstatus_complete(struct usb_setup_data *req) {
 		if (prog.blocknum == 0) {
 			switch (prog.buf[0]) {
 			case CMD_ERASE: {
-				#ifdef ENABLE_SAFEWRITE
-				check_do_erase();
-				#endif
-
 				// Clear this page here.
 				uint32_t baseaddr = *(uint32_t *)(prog.buf + 1);
 				if (baseaddr >= start_addr && baseaddr + DFU_TRANSFER_SIZE <= end_addr) {
@@ -150,10 +131,6 @@ static void usbdfu_getstatus_complete(struct usb_setup_data *req) {
 				break;
 			}
 		} else {
-			#ifdef ENABLE_SAFEWRITE
-			check_do_erase();
-			#endif
-
 			// From formula Address_Pointer + ((wBlockNum - 2)*wTransferSize)
 			uint32_t baseaddr = prog.addr + ((uint32_t)(prog.blocknum - 2) * DFU_TRANSFER_SIZE);
 
@@ -297,7 +274,9 @@ inline static void gpio_set_mode(uint32_t gpiodev, uint16_t gpion, uint8_t mode)
 #define gpio_read(gpiodev, gpion) \
 	(GPIO_IDR(gpiodev) & (1 << (gpion)))
 
-#ifdef ENABLE_GPIO_DFU_BOOT
+#define GPIO_DFU_BOOT_PORT GPIOB
+#define GPIO_DFU_BOOT_PIN 2
+
 int force_dfu_gpio() {
 	rcc_gpio_enable(GPIO_DFU_BOOT_PORT);
 	gpio_set_input_pp(GPIO_DFU_BOOT_PORT, GPIO_DFU_BOOT_PIN);
@@ -308,9 +287,6 @@ int force_dfu_gpio() {
 	gpio_set_input(GPIO_DFU_BOOT_PORT, GPIO_DFU_BOOT_PIN);
 	return val != 0;
 }
-#else
-#define force_dfu_gpio()  (0)
-#endif
 
 #define FLASH_ACR_LATENCY         (uint32_t)7
 #define FLASH_ACR_LATENCY_2WS  0x02
@@ -402,7 +378,6 @@ int main(void) {
 	 * asked to reboot into DFU mode. This should make the CPU to
 	 * boot into DFU if the user app has been erased. */
 
-	#ifdef ENABLE_WRITEPROT
 	// On every boot we check the FLASH WPR bits and proceed to protect
 	// the bootloader if it's unprotected. This requires a reset.
 	// If the device was DFU-rebooted we skip this check, to allow for
@@ -424,46 +399,14 @@ int main(void) {
 
 		_full_system_reset();
 	}
-	#endif
 
-	#ifdef ENABLE_PROTECTIONS
-	// Check for RDP protection, and in case it's not enabled, do it!
-	if (!(FLASH_OBR & 0x2)) {
-		// Read protection NOT enabled -> Enable it and reboot
-		uint16_t opt[8];
-		memcpy(&opt[0], (uint16_t*)FLASH_OPT_BYTES, sizeof(opt));
-		opt[WORD_RDP] = 0xFFFF;    // This means protected (L1) according to docs
-
-		// Unlock option bytes and wipe them
-		_flash_unlock();
-		_optbytes_unlock();
-		_flash_erase_option_bytes();
-
-		for (unsigned i = 0; i < 8; i++)
-			_flash_program_option_bytes((uint32_t)(&FLASH_OPT_BYTES[i]), opt[i]);
-
-		_full_system_reset();
-	}
-
-	// Disable JTAG and SWD to prevent debugging/readout
-	volatile uint32_t *_AFIO_MAPR = (uint32_t*)0x40010004U;
-	*_AFIO_MAPR = (*_AFIO_MAPR & ~(0x7 << 24)) | (0x4 << 24);
-	#endif
-
-	#ifdef ENABLE_CHECKSUM
 	const uint32_t start_addr = 0x08000000 + (FLASH_BOOTLDR_SIZE_KB*1024);
 	const uint32_t * const base_addr = (uint32_t*)start_addr;
 	uint32_t imagesize = base_addr[0x20 / 4];
-	#else
-	uint32_t imagesize = 0;
-	#endif
 
 	int go_dfu = rebooted_into_dfu() ||
 	#ifdef ENABLE_PINRST_DFU_BOOT
 	             reset_due_to_pin() ||
-	#endif
-	#ifdef ENABLE_WATCHDOG
-	             reset_due_to_watchdog() ||
 	#endif
 	             imagesize > FLASH_BOOTLDR_PAYLOAD_SIZE_KB*1024/4 ||
 	             force_dfu_gpio();
@@ -473,16 +416,11 @@ int main(void) {
 	if (!go_dfu &&
 	   (*(volatile uint32_t *)APP_ADDRESS & 0x2FFE0000) == 0x20000000) {
 
-		#ifdef ENABLE_CHECKSUM
 		if (validate_checksum(base_addr, imagesize))
-		#endif
 		{
 			// Clear flags
 			clear_reboot_flags();
-			#ifdef ENABLE_WATCHDOG
-			// Enable the watchdog
-			enable_iwdg(4096 * ENABLE_WATCHDOG / 26);
-			#endif
+
 			// Set vector table base address.
 			volatile uint32_t *_csb_vtor = (uint32_t*)0xE000ED08U;
 			*_csb_vtor = APP_ADDRESS & 0xFFFF;
@@ -527,10 +465,3 @@ void *memcpy(void * dst, const void * src, size_t count) {
 		*dstb++ = *srcb++;
 	return dst;
 }
-
-// Config checks
-
-#if defined(ENABLE_WRITEPROT) && defined(ENABLE_PROTECTIONS)
-  #error "ENABLE_PROTECTIONS already includes the same protections as ENABLE_WRITEPROT, do not specify both!"
-#endif
-

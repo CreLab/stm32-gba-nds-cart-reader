@@ -73,7 +73,6 @@ static void _flash_program_buffer(uint32_t address, uint16_t *data, unsigned len
 	FLASH_CR &= ~FLASH_CR_PG;
 }
 
-#if defined(ENABLE_PROTECTIONS) || defined(ENABLE_WRITEPROT)
 static void _flash_erase_option_bytes() {
 	_flash_wait_for_last_operation();
 
@@ -102,27 +101,3 @@ static void _optbytes_unlock() {
 		FLASH_OPTKEYR = 0xcdef89abU;
 	}
 }
-#endif
-
-#ifdef ENABLE_SAFEWRITE
-static void check_do_erase() {
-	// For protection reasons, we do not allow reading the flash using DFU
-	// and also we make sure to wipe the entire flash on an ERASE/WRITE command
-	// just to guarantee that nobody is able to extract the data by flashing a
-	// stub and executing it.
-
-	static int erased = 0;
-	if (erased) return;
-
-	/* Change usb_strings accordingly */
-	const uint32_t start_addr = FLASH_BASE_ADDR + (FLASH_BOOTLDR_SIZE_KB*1024);
-	const uint32_t end_addr   = FLASH_BASE_ADDR + (        FLASH_SIZE_KB*1024);
-	for (uint32_t addr = start_addr; addr < end_addr; addr += 1024)
-		if (!_flash_page_is_erased(addr))
-			_flash_erase_page(addr);
-
-	erased = 1;
-}
-#endif
-
-
