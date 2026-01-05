@@ -36,16 +36,16 @@ int main(void)
     __HAL_AFIO_REMAP_SWJ_DISABLE();
 
     hostif_init();
-    uart_printf("starting loop\r\n");
+    DEBUG_PRINT("starting loop");
 
     while (1)
     {
         hostif_run();
         cnt++;
 
-        if (cnt >= HAL_RCC_GetSysClockFreq())
+        if (cnt >= HAL_RCC_GetSysClockFreq()/2)
         {
-            uart_printf("Still alive\r\n");
+            DEBUG_PRINT("Still alive");
             cnt = 0;
         }
     }

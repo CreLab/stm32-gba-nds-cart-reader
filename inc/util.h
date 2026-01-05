@@ -49,13 +49,12 @@ __attribute__((always_inline)) static inline void NOP(void) { __asm__("\tnop"); 
 
 __attribute__((always_inline)) static inline void WAIT(size_t x)
 {
-    (void)x;
-    // __asm__ volatile(
-    //         ".Ldelay_loop_%=:\n\t"
-    //         "subs %[cnt], #1\n\t"
-    //         "bhi .Ldelay_loop_%=\n\t"
-    //         : [cnt] "+r" (x) :: "cc"
-    //        );
+     __asm__ volatile(
+             ".Ldelay_loop_%=:\n\t"
+             "subs %[cnt], #1\n\t"
+             "bhi .Ldelay_loop_%=\n\t"
+             : [cnt] "+r" (x) :: "cc"
+            );
 }
 
 GLOBAL_STATUS usb_send_data(const void *data, uint16_t len);

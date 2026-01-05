@@ -183,6 +183,8 @@ static void nds_cart_change_state(s_nds_cart_config *ctrl, uint8_t state)
 
 void nds_cart_exec_command(s_nds_cart_config* ctrl, uint64_t org_cmd, uint8_t *data, size_t len)
 {
+    assert(data != NULL);
+
     romcs_low();
     data_dir_output();
 
@@ -222,7 +224,21 @@ void nds_cart_exec_command(s_nds_cart_config* ctrl, uint64_t org_cmd, uint8_t *d
         }
     }
 
-    uint8_t *cmd_data = (uint8_t *) &cmd;
+    const uint8_t cmd_data[8] = {
+        (uint8_t)(cmd >> 56), (uint8_t)(cmd >> 48), (uint8_t)(cmd >> 40), (uint8_t)(cmd >> 32),
+        (uint8_t)(cmd >> 24), (uint8_t)(cmd >> 16), (uint8_t)(cmd >> 8),  (uint8_t)(cmd >> 0),
+    };
+
+    DEBUG_PRINTF("org_cmd: [%016llx] enc_cmd=[%016llx] cmd_data=[%016llx] clk=%s gap_clk=%d gap1=%u gap2=%u key2_result=%s",
+                 org_cmd,
+                 cmd,
+                 *((uint64_t*)cmd_data),
+                 clk_rate == NDS_CART_CLK_6P7_MHZ ? "6.7 Mhz" : "4.2 MHz",
+                 gap_clk,
+                 gap1,
+                 gap2,
+                 key2_result ? "KEY2" : "RAW"
+    );
 
     if (clk_rate == NDS_CART_CLK_6P7_MHZ)
     {

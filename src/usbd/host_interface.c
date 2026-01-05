@@ -331,20 +331,28 @@ static GLOBAL_STATUS hostif_handle_request(struct host_request *const rq,
             }
             break;
         case HOST_REQ_NDS_ROM_READ:
-            if (rq->len != 2)
+            if (rq->len == 2)
             {
-                hostif_reply_err(rp, "ERROR: nds rom read len != 2: %s", itox32(rq->len));
-                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
+                uint16_t len = (uint16_t)(rq->data[0] | (rq->data[1] << 8));
+                if (len > XFER_MAX_PAYLOAD_SIZE)
+                {
+                    len = XFER_MAX_PAYLOAD_SIZE;
+                }
+
+                DEBUG_PRINTF("ROM Address 0x%x Length %d", nds.rom_byte_addr, len);
+
+                nds_cart_rom_read(&nds_cart_state, nds.rom_byte_addr, rp->data, len);
+                nds.rom_byte_addr += len;
+
+                DEBUG_PRINTF("Data 0x%x", *((uint32_t*)&rp->data[0]));
+
+                rp->type = DEV_REPL_NDS_ROM_READ;
+                rp->len = len;
             }
             else
             {
-                uint16_t len = (uint16_t) (rq->data[0] | (rq->data[1] << 8));
-                if (len > XFER_MAX_PAYLOAD_SIZE)
-                    len = XFER_MAX_PAYLOAD_SIZE;
-                nds_cart_rom_read(&nds_cart_state, nds.rom_byte_addr, rp->data, len);
-                nds.rom_byte_addr += len;
-                rp->type = DEV_REPL_NDS_ROM_READ;
-                rp->len = len;
+                hostif_reply_err(rp, "ERROR: nds rom read len != 2: %s", itox32(rq->len));
+                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
             }
             break;
         case HOST_REQ_NDS_ROM_CHIPID:

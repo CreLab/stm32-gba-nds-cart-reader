@@ -141,6 +141,7 @@ GLOBAL_STATUS uart_printf(const char *msg, ...)
     char out[256] = {0};
     int len = vsnprintf(out, sizeof(out), msg, args);
     CHECK_GLOBAL_STATUS(uart_send_data(out, (uint16_t) len));
+    CHECK_GLOBAL_STATUS(uart_send_data("\n", (uint16_t)sizeof("\n")));
 
     va_end(args);
 
