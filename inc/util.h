@@ -43,6 +43,7 @@ typedef enum e_error_state
     ERROR_STATE_UART_INIT,
     ERROR_STATE_UART_TRANSMIT_FAIL,
     ERROR_STATE_GPIO_INIT,
+    ERROR_STATE_FLASH_READ,
 } e_error_state;
 
 __attribute__((always_inline)) static inline void NOP(void) { __asm__("\tnop"); }
