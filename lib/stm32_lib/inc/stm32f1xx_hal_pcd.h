@@ -336,7 +336,7 @@ HAL_StatusTypeDef HAL_PCD_UnRegisterIsoInIncpltCallback(PCD_HandleTypeDef *hpcd)
 HAL_StatusTypeDef HAL_PCD_Start(PCD_HandleTypeDef *hpcd);
 HAL_StatusTypeDef HAL_PCD_Stop(PCD_HandleTypeDef *hpcd);
 void HAL_PCD_IRQHandler(PCD_HandleTypeDef *hpcd);
-void HAL_PCD_WKUP_IRQHandler();
+void HAL_PCD_WKUP_IRQHandler(PCD_HandleTypeDef *hpcd);
 
 void HAL_PCD_SOFCallback(PCD_HandleTypeDef *hpcd);
 void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd);
@@ -397,11 +397,11 @@ PCD_StateTypeDef HAL_PCD_GetState(PCD_HandleTypeDef const *hpcd);
   * @{
   */
 #if defined (USB_OTG_FS)
-#define USB_OTG_FS_WAKEUP_EXTI_LINE                                   (0x1U << 18)  /*!< USB FS EXTI Line WakeUp Interrupt */
+#define USB_OTG_FS_WAKEUP_EXTI_LINE                                   (0x1UL << 18)  /*!< USB FS EXTI Line WakeUp Interrupt */
 #endif /* defined (USB_OTG_FS) */
 
 #if defined (USB)
-#define USB_WAKEUP_EXTI_LINE                                          (0x1U << 18)  /*!< USB FS EXTI Line WakeUp Interrupt */
+#define USB_WAKEUP_EXTI_LINE                                          (0x1UL << 18)  /*!< USB FS EXTI Line WakeUp Interrupt */
 #endif /* defined (USB) */
 
 /**
@@ -479,8 +479,8 @@ PCD_StateTypeDef HAL_PCD_GetState(PCD_HandleTypeDef const *hpcd);
   */
 #if defined (USB)
 /********************  Bit definition for USB_COUNTn_RX register  *************/
-#define USB_CNTRX_NBLK_MSK                    (0x1FU << 10)
-#define USB_CNTRX_BLSIZE                      (0x1U << 15)
+#define USB_CNTRX_NBLK_MSK                    (0x1FUL << 10)
+#define USB_CNTRX_BLSIZE                      (0x1UL << 15)
 
 /* SetENDPOINT */
 #define PCD_SET_ENDPOINT(USBx, bEpNum, wRegValue) \
@@ -774,7 +774,10 @@ PCD_StateTypeDef HAL_PCD_GetState(PCD_HandleTypeDef const *hpcd);
   */
 #define PCD_SET_EP_ADDRESS(USBx, bEpNum, bAddr) \
   do { \
-    uint16_t _wRegVal = (uint16_t)((PCD_GET_ENDPOINT((USBx), (bEpNum)) & USB_EPREG_MASK) | (bAddr)); \
+    uint16_t _wRegVal; \
+    \
+    _wRegVal = (PCD_GET_ENDPOINT((USBx), (bEpNum)) & USB_EPREG_MASK) | (bAddr); \
+    \
     PCD_SET_ENDPOINT((USBx), (bEpNum), (_wRegVal | USB_EP_CTR_RX | USB_EP_CTR_TX)); \
   } while(0) /* PCD_SET_EP_ADDRESS */
 

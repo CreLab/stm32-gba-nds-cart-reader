@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-#include "../../lib/usbd_lib/inc/usbd_def.h"
+#include "usbd_def.h"
 
 #define DEVICE_ID1 (UID_BASE)
 #define DEVICE_ID2 (UID_BASE + 0x4)

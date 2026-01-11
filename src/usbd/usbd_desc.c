@@ -15,8 +15,8 @@
  *
  ******************************************************************************
  */
-#include "../../inc/usbd/usbd_desc.h"
-#include "../../inc/usbd/usbd_conf.h"
+#include "usbd_desc.h"
+#include "usbd_conf.h"
 #include "usbd_core.h"
 
 #define USBD_VID 1155
