@@ -33,9 +33,8 @@ endif ()
 add_library(stm32_lib_interface INTERFACE)
 target_include_directories(stm32_lib_interface INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/inc)
 target_compile_definitions(stm32_lib_interface INTERFACE
-        USE_HAL_DRIVER
-        STM32F103xE
-        $<$<CONFIG:Debug>:DEBUG>)
+        -DUSE_HAL_DRIVER
+        -DSTM32F103xE)
 
 add_library(stm32_lib OBJECT)
 target_sources(stm32_lib PRIVATE ${STM32_LIB_SRC})
