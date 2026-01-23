@@ -5,6 +5,7 @@
 #include "gba_cart.h"
 #include "host_interface.h"
 #include "nds_cart.h"
+#include "nds_flash.h"
 #include "util.h"
 
 #define REQ_BUF_SIZE (XFER_MAX_PAYLOAD_SIZE + sizeof(struct host_request))
@@ -33,6 +34,7 @@ struct
 struct
 {
     size_t rom_byte_addr;
+    size_t flash_byte_addr;
 } nds;
 
 static GLOBAL_STATUS hostif_handle_request(struct host_request *const rq,
@@ -371,6 +373,66 @@ static GLOBAL_STATUS hostif_handle_request(struct host_request *const rq,
                 hostif_reply_err(rp,
                                  "ERROR: nds rom could not be initialized, see UART for details");
                 CHECK_GLOBAL_STATUS(ERROR_STATE_ROM_NOT_INITIALIZED);
+            }
+            break;
+        case HOST_REQ_NDS_FLASH_READ_ID:
+            {
+                DEBUG_PRINT("HOST_REQ_NDS_FLASH_READ_ID");
+                uint32_t data = nds_flash_read_id();
+
+                if (data != 0)
+                {
+                    DEBUG_PRINTF("data 0x%x", data);
+
+                    rp->type = DEV_REPL_NDS_FLASH_READ_ID;
+                    rp->len = 4;
+                    memcpy(rp->data, &data, sizeof(data));
+                }
+                else
+                {
+                    hostif_reply_err(rp,"ERROR: nds flash could not be accessed");
+                    CHECK_GLOBAL_STATUS(ERROR_STATE_FLASH_READ);
+                }
+            }
+            break;
+        case HOST_REQ_NDS_FLASH_SEEK:
+            DEBUG_PRINT("HOST_REQ_NDS_FLASH_SEEK");
+            if (rq->len == 4)
+            {
+                nds.flash_byte_addr = (size_t)(rq->data[0] | (rq->data[1] << 8) | (rq->data[2] << 16) | (rq->data[3] << 24));
+                rp->type = DEV_REPL_NDS_FLASH_SEEK;
+                rp->len = 0;
+            }
+            else
+            {
+                hostif_reply_err(rp, "ERROR: nds flash seek len != 4: %s", itox32(rq->len));
+                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
+            }
+            break;
+        case HOST_REQ_NDS_FLASH_READ:
+            DEBUG_PRINT("HOST_REQ_NDS_FLASH_READ");
+            if (rq->len == 2)
+            {
+                uint16_t len = (uint16_t)(rq->data[0] | (rq->data[1] << 8));
+                if (len > XFER_MAX_PAYLOAD_SIZE)
+                {
+                    len = XFER_MAX_PAYLOAD_SIZE;
+                }
+
+                DEBUG_PRINTF("FLASH Address 0x%x Length %d", nds.rom_byte_addr, len);
+
+                nds_flash_read_bytes(nds.flash_byte_addr, rp->data, len);
+                nds.flash_byte_addr += len;
+
+                DEBUG_PRINTF("Data 0x%x", *((uint32_t*)&rp->data[0]));
+
+                rp->type = DEV_REPL_NDS_FLASH_READ;
+                rp->len = len;
+            }
+            else
+            {
+                hostif_reply_err(rp, "ERROR: nds rom read len != 2: %s", itox32(rq->len));
+                CHECK_GLOBAL_STATUS(ERROR_STATE_SIZE_INVALID);
             }
             break;
         case HOST_REQ_ENTER_DFU_MODE:

@@ -9,4 +9,5 @@ doc/temp_chapter.md
 doc/tmp/contents.md
 src/nds_cart_key.c
 *.nds
+*.sav
 Project_Default.xml

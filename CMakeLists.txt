@@ -68,6 +68,7 @@ else ()
     set(CMAKE_PROJECT_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/gba_cart.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/nds_cart.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/nds_flash.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/nds_cart_key.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/usart.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/util.c

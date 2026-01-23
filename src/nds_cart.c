@@ -13,54 +13,6 @@
 #define NDS_SMALL_HEADER_SIZE 0x200
 #define NDS_EXT_HEADER_SIZE 0x1000
 
-__attribute__((always_inline)) static inline void wait_cycles(size_t cycles)
-{
-#pragma GCC unroll 64
-    for (size_t i = 0; i < cycles; i++)
-    {
-        __asm__ volatile("nop");
-    }
-}
-
-__attribute__((always_inline)) static inline uint8_t data_in_cycle(size_t cycles)
-{
-    clk_low();
-    wait_cycles(cycles);
-    uint8_t ret = data_input();
-    clk_high();
-    wait_cycles(cycles);
-    return ret;
-}
-
-__attribute__((always_inline)) static inline void data_out_cycle(uint8_t d, size_t cycles)
-{
-    clk_low();
-    data_output(d);
-    wait_cycles(cycles);
-    clk_high();
-    wait_cycles(cycles);
-}
-
-__attribute__((always_inline)) static inline uint8_t data_in_cycle_42(void)
-{
-    return data_in_cycle(8);
-}
-
-__attribute__((always_inline)) static inline uint8_t data_in_cycle_67(void)
-{
-    return data_in_cycle(5);
-}
-
-__attribute__((always_inline)) static inline void data_out_cycle_42(uint8_t d)
-{
-    data_out_cycle(d, 8);
-}
-
-__attribute__((always_inline)) static inline void data_out_cycle_67(uint8_t d)
-{
-    data_out_cycle(d, 5);
-}
-
 enum nds_proto_rev
 {
     NDS_PROTO_REV_MROM,
@@ -87,6 +39,34 @@ static void nds_cart_reset(s_nds_cart_config *ctrl);
 static void key1_init_keycode(uint32_t idcode, uint32_t level, uint32_t modulo, bool dsi);
 static void key1_encrypt_64bit(const s_blowfish_t *pBuf, uint32_t *data);
 static void key1_decrypt_64bit(const s_blowfish_t *pBuf, uint32_t *data);
+
+__attribute__((always_inline)) inline void data_dir_input(void) { GPIOC->CRL = 0x44444444; }
+__attribute__((always_inline)) inline void data_dir_output(void) { GPIOC->CRL = 0x11111111; }
+
+__attribute__((always_inline)) static inline void data_in_cycle_n_byte(uint8_t* data, size_t cycles, size_t n)
+{
+    for (size_t idx = 0; idx < n; idx++)
+    {
+        GPIOC_CLR_PIN(PIN_CLK);
+        wait_cycles(cycles);
+        data[idx] = (uint8_t)GPIOC->IDR;
+        GPIOC_SET_PIN(PIN_CLK);
+        wait_cycles(cycles);
+    }
+}
+
+__attribute__((always_inline)) static inline void data_out_cycle_n_byte(const uint8_t* data, size_t cycles, size_t n)
+{
+    for (size_t idx = 0; idx < n; idx++)
+    {
+        GPIOC_CLR_PIN(PIN_CLK);
+        uint8_t nv = (uint8_t) ~data[idx];
+        GPIOC->BSRR = (uint32_t)(data[idx] | ((uint8_t)(nv) << 16));
+        wait_cycles(cycles);
+        GPIOC_SET_PIN(PIN_CLK);
+        wait_cycles(cycles);
+    }
+}
 
 static void nds_cart_begin_key1(s_nds_cart_config *ctrl)
 {
@@ -138,10 +118,10 @@ static void nds_cart_begin_key2(s_nds_cart_config *ctrl)
 void nds_cart_init(s_nds_cart_config *ctrl)
 {
     data_dir_input();
-    clk_high();
-    romcs_high();
-    reset_high();
-    eepromcs_high();
+    GPIOC_SET_PIN(PIN_CLK);
+    GPIOC_SET_PIN(PIN_ROMCS);
+    GPIOC_SET_PIN(PIN_RESET);
+    GPIOC_SET_PIN(PIN_EEPROMCS);
     MODIFY_REG(GPIOC->CRH, 0xFFFFu, 0x1111u);
 
     nds_cart_reset(ctrl);
@@ -185,7 +165,7 @@ void nds_cart_exec_command(s_nds_cart_config* ctrl, uint64_t org_cmd, uint8_t *d
 {
     assert(data != NULL);
 
-    romcs_low();
+    GPIOC_CLR_PIN(PIN_ROMCS);
     data_dir_output();
 
     e_nds_cart_clk_rate clk_rate;
@@ -194,6 +174,9 @@ void nds_cart_exec_command(s_nds_cart_config* ctrl, uint64_t org_cmd, uint8_t *d
     size_t gap1;
     size_t gap2;
     uint64_t cmd;
+
+    size_t timing = 0;
+    uint8_t dummyData[8] = { 0 };
 
     if (ctrl->state == NDS_CART_KEY1)
     {
@@ -240,39 +223,20 @@ void nds_cart_exec_command(s_nds_cart_config* ctrl, uint64_t org_cmd, uint8_t *d
                  key2_result ? "KEY2" : "RAW"
     );
 
+    timing = FOUR_MHZ_IN_CYCLES;
+
     if (clk_rate == NDS_CART_CLK_6P7_MHZ)
     {
-        for (size_t i = 0; i < 8; i++)
-        {
-            data_out_cycle_67(cmd_data[i]);
-        }
+        timing = SIX_MHZ_IN_CYCLES;
     }
-    else
-    {
-        for (size_t i = 0; i < 8; i++)
-        {
-            data_out_cycle_42(cmd_data[i]);
-        }
-    }
+
+    data_out_cycle_n_byte(cmd_data, timing, 8);
 
     data_dir_input();
 
     if (gap_clk)
     {
-        if (clk_rate == NDS_CART_CLK_6P7_MHZ)
-        {
-            for (size_t i = 0; i < gap1; i++)
-            {
-                data_in_cycle_67();
-            }
-        }
-        else
-        {
-            for (size_t i = 0; i < gap1; i++)
-            {
-                data_in_cycle_42();
-            }
-        }
+        data_in_cycle_n_byte(dummyData, timing, gap1);
 
         if (key2_result)
         {
@@ -294,20 +258,7 @@ void nds_cart_exec_command(s_nds_cart_config* ctrl, uint64_t org_cmd, uint8_t *d
                 block_size = NDS_CHUNK_SIZE;
             }
 
-            if (clk_rate == NDS_CART_CLK_6P7_MHZ)
-            {
-                for (size_t i = 0; i < block_size; i++)
-                {
-                    data[i] = data_in_cycle_67();
-                }
-            }
-            else
-            {
-                for (size_t i = 0; i < block_size; i++)
-                {
-                    data[i] = data_in_cycle_42();
-                }
-            }
+            data_in_cycle_n_byte(data, timing, block_size);
 
             if (key2_result)
             {
@@ -324,20 +275,7 @@ void nds_cart_exec_command(s_nds_cart_config* ctrl, uint64_t org_cmd, uint8_t *d
 
             if (gap_clk)
             {
-                if (clk_rate == NDS_CART_CLK_6P7_MHZ)
-                {
-                    for (size_t i = 0; i < gap2; i++)
-                    {
-                        data_in_cycle_67();
-                    }
-                }
-                else
-                {
-                    for (size_t i = 0; i < gap2; i++)
-                    {
-                        data_in_cycle_42();
-                    }
-                }
+                data_in_cycle_n_byte(dummyData, timing, gap2);
 
                 if (key2_result)
                 {
@@ -352,7 +290,7 @@ void nds_cart_exec_command(s_nds_cart_config* ctrl, uint64_t org_cmd, uint8_t *d
     }
 
     data_dir_input();
-    romcs_high();
+    GPIOC_SET_PIN(PIN_ROMCS);
     WAIT(10);
 }
 
@@ -733,9 +671,9 @@ static void nds_cart_read_secure_area_page(s_nds_cart_config *ctrl, uint8_t *dat
 
 static void nds_cart_reset(s_nds_cart_config *ctrl)
 {
-    reset_low();
+    GPIOC_CLR_PIN(PIN_RESET);
     HAL_Delay(10);
-    reset_high();
+    GPIOC_SET_PIN(PIN_RESET);
 
     ctrl->state = NDS_CART_UNINITIALIZED;
     ctrl->normal_gap_clk = false;

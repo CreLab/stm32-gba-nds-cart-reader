@@ -3,6 +3,7 @@
 #include "gba_cart.h"
 #include "host_interface.h"
 #include "usart.h"
+#include "gpios.h"
 
 GLOBAL_STATUS SystemClock_Config(void);
 
@@ -25,15 +26,7 @@ int main(void)
 
     MX_USB_DEVICE_Init();
     MX_USART1_UART_Init();
-
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOD_CLK_ENABLE();
-
-    __HAL_RCC_AFIO_CLK_ENABLE();
-
-    __HAL_AFIO_REMAP_SWJ_DISABLE();
+    MX_GPIO_Init();
 
     hostif_init();
     DEBUG_PRINT("starting loop");
@@ -89,6 +82,9 @@ GLOBAL_STATUS SystemClock_Config(void)
     {
         CHECK_GLOBAL_STATUS(ERROR_STATE_PERIPH_CLK_FAIL);
     }
+
+    __HAL_RCC_AFIO_CLK_ENABLE();
+    __HAL_AFIO_REMAP_SWJ_DISABLE();
 
     status = ERROR_STATE_OK;
 EXIT:

@@ -23,24 +23,28 @@
 
 USBD_HandleTypeDef hUsbDeviceFS;
 
-USBD_StatusTypeDef MX_USB_DEVICE_Init(void)
+GLOBAL_STATUS MX_USB_DEVICE_Init(void)
 {
+    GLOBAL_STATUS status = ERROR_STATE_NONE;
+
     if (USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS) != USBD_OK)
     {
-        return USBD_FAIL;
+        CHECK_GLOBAL_STATUS(ERROR_STATE_USBD_INIT_FAIL);
     }
     if (USBD_RegisterClass(&hUsbDeviceFS, &USBD_CDC) != USBD_OK)
     {
-        return USBD_FAIL;
+        CHECK_GLOBAL_STATUS(ERROR_STATE_USBD_INIT_FAIL);
     }
     if (USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS) != USBD_OK)
     {
-        return USBD_FAIL;
+        CHECK_GLOBAL_STATUS(ERROR_STATE_USBD_INIT_FAIL);
     }
     if (USBD_Start(&hUsbDeviceFS) != USBD_OK)
     {
-        return USBD_FAIL;
+        CHECK_GLOBAL_STATUS(ERROR_STATE_USBD_INIT_FAIL);
     }
 
-    return USBD_OK;
+    status = ERROR_STATE_OK;
+EXIT:
+    return status;
 }

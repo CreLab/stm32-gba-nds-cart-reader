@@ -17,7 +17,7 @@ GLOBAL_STATUS MX_USART1_UART_Init(void)
     huart1.Init.OverSampling = UART_OVERSAMPLING_16;
     if (HAL_UART_Init(&huart1) != HAL_OK)
     {
-        CHECK_GLOBAL_STATUS(ERROR_STATE_UART_INIT);
+        CHECK_GLOBAL_STATUS(ERROR_STATE_UART_INIT_FAIL);
     }
 
     HAL_Delay(1000);

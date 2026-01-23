@@ -23,11 +23,12 @@
 extern "C" {
 #endif
 
-#include "../../lib/usbd_lib/inc/usbd_def.h"
+#include "usbd_def.h"
 #include "stm32f1xx.h"
 #include "stm32f1xx_hal.h"
+#include "util.h"
 
-USBD_StatusTypeDef MX_USB_DEVICE_Init(void);
+GLOBAL_STATUS MX_USB_DEVICE_Init(void);
 
 #ifdef __cplusplus
 }

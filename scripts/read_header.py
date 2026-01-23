@@ -108,7 +108,7 @@ if __name__ == "__main__":
     get_data([0x96, 0x00, 0x00, 0x00], 2,    "NAND start of RW area ;/usually both same address (0=None)     :")
     get_data([0x98, 0x00, 0x00, 0x00], 24,   "Reserved (zero filled)                                         :")
     get_data([0xB0, 0x00, 0x00, 0x00], 16,   "Reserved (zero filled; or \"DoNotZeroFillMem\"=unlaunch fastboot):")
-    get_data([0xC0, 0x00, 0x00, 0x00], 156,  "Nintendo Logo (compressed bitmap, same as in GBA Headers)      :", False)
+    get_data([0xC0, 0x00, 0x00, 0x00], 156,  "Nintendo Logo (compressed bitmap, same as in GBA Headers)      :")
     get_data([0x5C, 0x01, 0x00, 0x00], 2,    "Nintendo Logo Checksum, CRC-16 of [0C0h-15Bh], fixed CF56h     :")
     get_data([0x5E, 0x01, 0x00, 0x00], 2,    "Header Checksum, CRC-16 of [000h-15Dh]                         :")
     get_data([0x60, 0x01, 0x00, 0x00], 4,    "Debug rom_offset   (0=none) (8000h and up)       ;only if debug:")
